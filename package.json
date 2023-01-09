@@ -1,0 +1,36 @@
+{
+  "name": "@dobuki/lib-template",
+  "version": "1.0.1",
+  "description": "",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "webpack && ts-node demo.ts",
+    "test": "mocha src/index.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jacklehamster/lib-template.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jacklehamster/lib-template/issues"
+  },
+  "homepage": "https://github.com/jacklehamster/lib-template#readme",
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^18.7.14",
+    "webpack-cli": "^4.10.0",
+    "chai": "^4.2.0",
+    "mocha": "^9.1.4",
+    "mock-xmlhttprequest": "^7.0.4"
+  },
+  "dependencies": {
+    "express": "^4.18.1",
+    "express-static": "^1.2.6",
+    "icon-gen": "^3.0.1",
+    "path": "^0.12.7",
+    "ts-loader": "^9.3.1"
+  }
+}
