@@ -33,6 +33,7 @@
           "data/data-3.json",
           "data/data-4.json",
           "data/data-5.json",
+          "data/data-repeat-object.json",
         ].sort();
 
         const promises = files.map(loader.load);
@@ -46,13 +47,20 @@
         const reducer = new Reducer(true);
         const dataStore = reducer.reduce(header);
 
-        const extractable = new ExtractableData(dataStore);
+        const extractable = new ExtractableData(dataStore, {allowReferences: true});
 
         files.forEach((file, index) => {
           const extractedData = extractable.extract(file);
           console.log(file, extractedData);
           console.assert(JSON.stringify(data[index]) === JSON.stringify(extractedData));
         });
+        window.extractable = extractable;
+
+        const repeatObject = extractable.extract("data/data-repeat-object.json");
+        console.assert(repeatObject.a === repeatObject.b);
+
+        const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json", false);
+        console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
       });
     </script>
 	</body>

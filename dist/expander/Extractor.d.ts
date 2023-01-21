@@ -1,8 +1,8 @@
 import { DataStore } from "../reducer/Reducer";
-import { ReducedToken } from "../tokenizer/Token";
+import { ReducedToken, Type } from "../tokenizer/Token";
 export interface ExtractionConfig {
     cacheable: boolean;
-    allowMultipleReferences: boolean;
+    allowReferences: boolean;
 }
 export declare class ExtractableData {
     extractor: Extractor;
@@ -13,6 +13,8 @@ export declare class ExtractableData {
     extract(filename: string, allowMultipleReferences?: boolean): any;
 }
 declare class Extractor {
+    valueFetcher: Record<Type, undefined | ((token: ReducedToken, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig) => any)>;
+    constructor();
     extractFileNames(files: number[], headerTokens: ReducedToken[], config: ExtractionConfig): any[];
     extract(headerTokens: ReducedToken[], dataTokens: ReducedToken[], config: ExtractionConfig): any;
     private extractToken;
