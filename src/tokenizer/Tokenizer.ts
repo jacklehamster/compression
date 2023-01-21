@@ -1,8 +1,34 @@
 import md5 from "md5";
+import Loader from "../io/Loader";
 import { Header } from "./Header";
 import Token, { getType, Hash, SPLIT_REGEX } from "./Token";
 
+/**
+ * Class for spitting objects into tokens.
+ */
 export default class Tokenizer {
+    loader: Loader = new Loader();
+
+    /**
+     * Load json or text files and turn them into tokens.
+     * 
+     * @param files files to load and reduce.
+     */
+    async load(...files: string[]): Promise<Record<string, any>> {
+        if (files.some(file => typeof file !== "string")) {
+            throw new Error("Each argument passed to load must be a string.");
+        }
+        const sortedFiles = files.sort();
+        const allData = await Promise.all(sortedFiles.map(this.loader.load));
+        return this.tokenize(Object.fromEntries(allData.map((data, index) => [sortedFiles[index], data])));
+    }
+
+    /**
+     * Takes a mapping of filename and their corresponding data, and turn them into tokens.
+     *
+     * @param items Mapping from filename to data.
+     * @returns All data stored as tokens.
+     */
     tokenize(items: Record<string, any>) {
         const header: Header = {
             registry: {},

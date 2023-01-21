@@ -25,8 +25,7 @@
 	<body>
     <script>
       document.addEventListener("DOMContentLoaded", async () => {
-        const { Loader, Tokenizer, Reducer, ExtractableData } = exports;
-        const loader = new Loader();
+        const { Tokenizer, Reducer, ExtractableData, Loader } = exports;
         const files = [
           "data/data-1.json",
           "data/data-2.json",
@@ -34,17 +33,16 @@
           "data/data-4.json",
           "data/data-5.json",
           "data/data-repeat-object.json",
+          "data/data-text.txt",
         ].sort();
 
-        const promises = files.map(loader.load);
-        const data = await Promise.all(promises);
+        const loader = new Loader();
+        const originalData = await Promise.all(files.map(loader.load));
 
         const tokenizer = new Tokenizer();
-        const results = Object.fromEntries(data.map((d, index) => [files[index], d]));
+        const header = await tokenizer.load(...files);
 
-        const header = tokenizer.tokenize(results);
-
-        const reducer = new Reducer(true);
+        const reducer = new Reducer();
         const dataStore = reducer.reduce(header);
 
         const extractable = new ExtractableData(dataStore, {allowReferences: true});
@@ -52,7 +50,7 @@
         files.forEach((file, index) => {
           const extractedData = extractable.extract(file);
           console.log(file, extractedData);
-          console.assert(JSON.stringify(data[index]) === JSON.stringify(extractedData));
+          console.assert(JSON.stringify(originalData[index]) === JSON.stringify(extractedData));
         });
         window.extractable = extractable;
 

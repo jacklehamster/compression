@@ -1,6 +1,13 @@
 import { DataStore } from "../reducer/Reducer";
 import { ReducedToken, Type } from "../tokenizer/Token";
 
+/**
+ * Configuration that can be passed.
+ * - cacheable: We can use cache to boost extraction speed. This uses a bit more memory.
+ * - allowReferences: within the extracted object, multiple nodes can reference the same object.
+ * This helps performance and memory, but can lead to weird side effects if the extracted object
+ * gets modified.
+ */
 export interface ExtractionConfig {
     cacheable: boolean;
     allowReferences: boolean;
@@ -11,6 +18,9 @@ const DEFAULT_CONFIG: ExtractionConfig = {
     allowReferences: false,
 }
 
+/**
+ * Class storing all data that can be extracted.
+ */
 export class ExtractableData {
     extractor: Extractor = new Extractor();
     dataStore: DataStore;
@@ -27,6 +37,15 @@ export class ExtractableData {
         this.fileToSlot = Object.fromEntries(fileNames.map((file, index) => [file, index]));
     }
 
+    /**
+     * Extract data form a stored file.
+     *
+     * @param filename filename to be extracted.
+     * @param allowReferences If true, within the extracted object, multiple nodes can reference the same object.
+     *  This helps performance and memory, but can lead to weird side effects if the extracted object
+     *  gets modified.
+     * @returns extracted data.
+     */
     extract(filename: string, allowReferences?: boolean) {
         const slot = this.fileToSlot[filename];
         const dataTokens = this.dataStore.getDataTokens(slot);
