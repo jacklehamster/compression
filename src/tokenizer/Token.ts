@@ -18,6 +18,7 @@ export interface ReducedToken {
     type: Type;
     value: any;
     debug?: any;
+    cache?: any;
 }
 
 export function getType(item: any): Type {

@@ -1,6 +1,12 @@
 import Token, { Hash, ReducedToken } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
 
+export interface DataStore {
+    headerTokens: ReducedToken[];
+    files: number[];
+    getDataTokens(index: number): ReducedToken[] | undefined;
+}
+
 export default class Reducer {
     debug: boolean;
 
@@ -8,7 +14,7 @@ export default class Reducer {
         this.debug = debug ?? false;
     }
 
-    reduce(header: Header) {
+    reduce(header: Header): DataStore {
         const hashToIndex : Record<Hash, number>  = {};
         //  start with header tokens
         const headerTokens = this.createReducedTokens(
@@ -30,7 +36,9 @@ export default class Reducer {
         return {
             headerTokens,
             files,
-            dataTokens,
+            getDataTokens(index: number) {
+                return dataTokens[index];
+            },
         };
     }
 

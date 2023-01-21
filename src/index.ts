@@ -1,13 +1,13 @@
 import Loader from "./io/Loader";
 import Tokenizer from "./tokenizer/Tokenizer";
 import Reducer from "./reducer/Reducer";
-import Expander from "./expander/Expander";
+import {ExtractableData} from "./expander/Extractor";
 
 const exports = {
   Loader,
   Tokenizer,
   Reducer,
-  Expander,
+  ExtractableData,
 }
 
 export default exports;

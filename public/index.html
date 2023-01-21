@@ -25,7 +25,7 @@
 	<body>
     <script>
       document.addEventListener("DOMContentLoaded", async () => {
-        const { Loader, Tokenizer, Reducer, Expander } = exports;
+        const { Loader, Tokenizer, Reducer, ExtractableData } = exports;
         const loader = new Loader();
         const files = [
           "data/data-1.json",
@@ -44,14 +44,14 @@
         const header = tokenizer.tokenize(results);
 
         const reducer = new Reducer(true);
-        const reductionResult = reducer.reduce(header);
+        const dataStore = reducer.reduce(header);
 
-        const expander = new Expander();
-        const fileNames = expander.expandFileNames(reductionResult.files, reductionResult.headerTokens);
-        fileNames.forEach((fileName, index) => {
-          const expandedData = expander.expand(reductionResult.headerTokens, reductionResult.dataTokens[index]);
-          console.log(fileName, expandedData);
-          console.assert(JSON.stringify(data[index]) === JSON.stringify(expandedData));
+        const extractable = new ExtractableData(dataStore);
+
+        files.forEach((file, index) => {
+          const extractedData = extractable.extract(file);
+          console.log(file, extractedData);
+          console.assert(JSON.stringify(data[index]) === JSON.stringify(extractedData));
         });
       });
     </script>
