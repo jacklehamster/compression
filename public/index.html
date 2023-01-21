@@ -23,5 +23,37 @@
     <title>Demo</title>
 	</head>
 	<body>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const { Loader, Tokenizer, Reducer, Expander } = exports;
+        const loader = new Loader();
+        const files = [
+          "data/data-1.json",
+          "data/data-2.json",
+          "data/data-3.json",
+          "data/data-4.json",
+          "data/data-5.json",
+        ].sort();
+
+        const promises = files.map(loader.load);
+        const data = await Promise.all(promises);
+
+        const tokenizer = new Tokenizer();
+        const results = Object.fromEntries(data.map((d, index) => [files[index], d]));
+
+        const header = tokenizer.tokenize(results);
+
+        const reducer = new Reducer(true);
+        const reductionResult = reducer.reduce(header);
+
+        const expander = new Expander();
+        const fileNames = expander.expandFileNames(reductionResult.files, reductionResult.headerTokens);
+        fileNames.forEach((fileName, index) => {
+          const expandedData = expander.expand(reductionResult.headerTokens, reductionResult.dataTokens[index]);
+          console.log(fileName, expandedData);
+          console.assert(JSON.stringify(data[index]) === JSON.stringify(expandedData));
+        });
+      });
+    </script>
 	</body>
 </html>
