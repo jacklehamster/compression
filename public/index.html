@@ -24,6 +24,11 @@
 	</head>
 	<body>
     <script>
+      const out = document.body.appendChild(
+         Document.createElement("div"));
+      console.log = (...msg) => out.textContent += msg.join(" ") + "\n";
+
+
       document.addEventListener("DOMContentLoaded", async () => {
         const { Tokenizer, Reducer, ExtractableData, Loader } = exports;
         const files = [
