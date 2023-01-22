@@ -26,7 +26,8 @@
     <script>
       const out = document.body.appendChild(
          document.createElement("div"));
-      console.log = (...msg) => out.textContent += msg.join(" ") + "\n";
+      out.style.whiteSpace = "pre";
+      console.log = (...msg) => out.textContent += msg.map(m => JSON.stringify(m, null, "  ")).join(" ") + "\n";
 
 
       document.addEventListener("DOMContentLoaded", async () => {
