@@ -26,6 +26,7 @@ export default class ExtractableData {
     dataStore: DataStore;
     fileToSlot: Record<string, number>;
     config: ExtractionConfig;
+    fileNames: string[];
 
     constructor(dataStore: DataStore, config?: ExtractionConfig) {
         this.dataStore = dataStore;
@@ -33,8 +34,8 @@ export default class ExtractableData {
             ...DEFAULT_CONFIG,
             ...config,
         };
-        const fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
-        this.fileToSlot = Object.fromEntries(fileNames.map((file, index) => [file, index]));
+        this.fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
+        this.fileToSlot = Object.fromEntries(this.fileNames.map((file, index) => [file, index]));
     }
 
     /**

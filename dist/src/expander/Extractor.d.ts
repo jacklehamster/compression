@@ -19,6 +19,7 @@ export default class ExtractableData {
     dataStore: DataStore;
     fileToSlot: Record<string, number>;
     config: ExtractionConfig;
+    fileNames: string[];
     constructor(dataStore: DataStore, config?: ExtractionConfig);
     /**
      * Extract data form a stored file.

@@ -5,7 +5,7 @@
   "main": "out/src/index.js",
   "type": "module",
   "scripts": {
-    "start": "webpack && tsc --esModuleInterop --resolveJsonModule --outdir out src/index.ts && ts-node demo.ts",
+    "start": "webpack && tsc --esModuleInterop --resolveJsonModule --outdir out src/index.ts && npm run browserify && ts-node demo.ts",
     "test": "mocha src/index.test.js",
     "browserify": "browserify out/src/index.js -o public/compression.js"
   },

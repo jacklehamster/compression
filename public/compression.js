@@ -2980,14 +2980,14 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "description": "",
-    "main": "out/index.js",
+    "main": "out/src/index.js",
     "type": "module",
     "scripts": {
-        "start": "webpack && tsc --esModuleInterop --resolveJsonModule --outdir out src/index.ts && ts-node demo.ts",
+        "start": "webpack && tsc --esModuleInterop --resolveJsonModule --outdir out src/index.ts && npm run browserify && ts-node demo.ts",
         "test": "mocha src/index.test.js",
-        "browserify": "browserify out/index.js -o public/compression.js"
+        "browserify": "browserify out/src/index.js -o public/compression.js"
     },
     "repository": {
         "type": "git",
@@ -3945,8 +3945,8 @@ var ExtractableData = /** @class */ (function () {
         this.extractor = new Extractor();
         this.dataStore = dataStore;
         this.config = __assign(__assign({}, DEFAULT_CONFIG), config);
-        var fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
-        this.fileToSlot = Object.fromEntries(fileNames.map(function (file, index) { return [file, index]; }));
+        this.fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
+        this.fileToSlot = Object.fromEntries(this.fileNames.map(function (file, index) { return [file, index]; }));
     }
     /**
      * Extract data form a stored file.

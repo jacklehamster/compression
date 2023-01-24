@@ -23,8 +23,8 @@ var ExtractableData = /** @class */ (function () {
         this.extractor = new Extractor();
         this.dataStore = dataStore;
         this.config = __assign(__assign({}, DEFAULT_CONFIG), config);
-        var fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
-        this.fileToSlot = Object.fromEntries(fileNames.map(function (file, index) { return [file, index]; }));
+        this.fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
+        this.fileToSlot = Object.fromEntries(this.fileNames.map(function (file, index) { return [file, index]; }));
     }
     /**
      * Extract data form a stored file.
