@@ -149,7 +149,8 @@ var Tokenizer = /** @class */ (function () {
             return this.registerToken(hash, item, registry, counter, file, [chunksToken.hash, separatorsToken.hash]);
         }
         else {
-            return this.registerToken((0, blueimp_md5_1["default"])(JSON.stringify(item)), item, registry, counter, file);
+            var m = (0, blueimp_md5_1["default"])(JSON.stringify(item));
+            return this.registerToken(m, item, registry, counter, file);
         }
     };
     return Tokenizer;

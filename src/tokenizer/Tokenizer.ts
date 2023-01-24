@@ -84,7 +84,8 @@ export default class Tokenizer {
             const hash = md5(`${chunksToken.hash}-${separatorsToken.hash}`);
             return this.registerToken(hash, item, registry, counter, file, [chunksToken.hash, separatorsToken.hash]);
         } else {
-            return this.registerToken(md5(JSON.stringify(item)), item, registry, counter, file);
+            const m = md5(JSON.stringify(item));
+            return this.registerToken(m, item, registry, counter, file);
         }
     }
 }

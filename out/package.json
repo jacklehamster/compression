@@ -1,12 +1,13 @@
 {
     "name": "@dobuki/compression",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "",
-    "main": "out/index.js",
+    "main": "out/src/index.js",
     "type": "module",
     "scripts": {
         "start": "webpack && tsc --esModuleInterop --resolveJsonModule --outdir out src/index.ts && ts-node demo.ts",
-        "test": "mocha src/index.test.js"
+        "test": "mocha src/index.test.js",
+        "browserify": "browserify out/src/index.js -o public/compression.js"
     },
     "repository": {
         "type": "git",
