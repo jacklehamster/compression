@@ -1,8 +1,8 @@
 {
     "name": "@dobuki/compression",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "description": "",
-    "main": "src/index.ts",
+    "main": "out/index.js",
     "type": "module",
     "scripts": {
         "start": "webpack && tsc --resolveJsonModule --outdir out src/index.ts && ts-node demo.ts",
