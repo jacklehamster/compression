@@ -25,11 +25,17 @@
 	<body>
     <script>
       const isTouchDevice = "ontouchstart" in document.documentElement;
-      if (isTouchDevice) {
-        const out = document.body.appendChild(document.createElement("div"));
-        out.style.whiteSpace = "pre";
-        console.log = (...msg) => out.textContent += msg.map(m => JSON.stringify(m, null, "  ")).join(" ") + "\n";
-      }
+      const out = document.body.appendChild(document.createElement("div"));
+      out.style.whiteSpace = "pre";
+      out.style.fontSize = "8pt";
+      const superLog = console.log;
+      console.log = (...msg) => {
+        superLog(...msg);
+
+        const div = out.appendChild(document.createElement("div"));
+        div.textContent = msg.map(m => JSON.stringify(m, null, "  ")).join(" ") + "\n";
+        out.appendChild(document.createElement("hr"));
+      };
 
       document.addEventListener("DOMContentLoaded", async () => {
         const { Loader, Compressor } = exports;
