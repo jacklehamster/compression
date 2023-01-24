@@ -2980,9 +2980,9 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.11",
+    "version": "1.0.12",
     "description": "",
-    "main": "out/src/index.js",
+    "main": "src/index.ts",
     "type": "module",
     "scripts": {
         "start": "webpack && tsc --esModuleInterop --resolveJsonModule --outdir out src/index.ts && npm run browserify && ts-node demo.ts",
