@@ -24,20 +24,26 @@
 	</head>
 	<body>
     <script>
-      const out = document.body.appendChild(
-         document.createElement("div"));
-      out.style.whiteSpace = "pre";
-      console.log = (...msg) => out.textContent += msg.map(m => JSON.stringify(m, null, "  ")).join(" ") + "\n";
-
+      const isTouchDevice = "ontouchstart" in document.documentElement;
+      if (isTouchDevice) {
+        const out = document.body.appendChild(document.createElement("div"));
+        out.style.whiteSpace = "pre";
+        console.log = (...msg) => out.textContent += msg.map(m => JSON.stringify(m, null, "  ")).join(" ") + "\n";
+      }
 
       document.addEventListener("DOMContentLoaded", async () => {
-        const { Tokenizer, Reducer, ExtractableData, Loader } = exports;
+        const { Loader, Compressor } = exports;
         const files = [
           "data/data-1.json",
           "data/data-2.json",
           "data/data-3.json",
           "data/data-4.json",
           "data/data-5.json",
+          "data/data-6.json",
+          "data/data-7.json",
+          "data/data-8.json",
+          "data/data-9.json",
+          "data/data-10.json",
           "data/data-repeat-object.json",
           "data/data-text.txt",
         ].sort();
@@ -45,20 +51,31 @@
         const loader = new Loader();
         const originalData = await Promise.all(files.map(loader.load));
 
-        const tokenizer = new Tokenizer();
-        const header = await tokenizer.load(...files);
+        //  compress
+        const compressor = new Compressor();
+        let time = performance.now();
+        compressedBuffer = compressor.compress(Object.fromEntries(originalData.map((data, index) => [files[index], data])));
+        console.log("Time to compress: %s", performance.now() - time);
 
-        const reducer = new Reducer();
-        const dataStore = reducer.reduce(header);
+        console.log("Compressed buffer size is %s", compressedBuffer.byteLength);
 
-        const extractable = new ExtractableData(dataStore, {allowReferences: true});
+        const textEncoder = new TextEncoder();
+        console.log("Original data size was %s", originalData
+          .map(data => textEncoder.encode(JSON.stringify(data)).length)
+          .reduce((a, b) => a + b));
+
+        //  expand
+        time = performance.now();
+        const extractable = compressor.expand(compressedBuffer, {allowReferences: true});
+        console.log("Time to expand header: %s", performance.now() - time);
 
         files.forEach((file, index) => {
+          time = performance.now();
           const extractedData = extractable.extract(file);
-          console.log(file, extractedData);
+          console.log("Time to expand %s: %s", file, performance.now() - time);
+          console.log([file, extractedData]);
           console.assert(JSON.stringify(originalData[index]) === JSON.stringify(extractedData));
         });
-        window.extractable = extractable;
 
         const repeatObject = extractable.extract("data/data-repeat-object.json");
         console.assert(repeatObject.a === repeatObject.b);
@@ -66,6 +83,12 @@
         const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json", false);
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
       });
+    </script>
+
+    <script>
+      console.log("Test token encoder");
+      const { TokenEncoder } = exports;
+      TokenEncoder.selfTest();
     </script>
 	</body>
 </html>

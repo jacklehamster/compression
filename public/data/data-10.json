@@ -1,0 +1,39 @@
+{
+	"random": "7",
+	"random float": "82.503",
+	"bool": "true",
+	"date": "1985-08-04",
+	"regEx": "helloooooooooooooooooooooooooooooooooooooooooooooooo to you",
+	"enum": "online",
+	"firstname": "Alex",
+	"lastname": "Hilbert",
+	"city": "Maputo",
+	"country": "Belgium",
+	"countryCode": "GE",
+	"email uses current data": "Alex.Hilbert@gmail.com",
+	"email from expression": "Alex.Hilbert@yopmail.com",
+	"array": [
+		"Maud",
+		"Melanie",
+		"Judy",
+		"Steffane",
+		"Kaia"
+	],
+	"array of objects": [
+		{
+			"index": "0",
+			"index start at 5": "5"
+		},
+		{
+			"index": "1",
+			"index start at 5": "6"
+		},
+		{
+			"index": "2",
+			"index start at 5": "7"
+		}
+	],
+	"Phylis": {
+		"age": "21"
+	}
+}

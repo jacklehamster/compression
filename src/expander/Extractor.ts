@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: ExtractionConfig = {
 /**
  * Class storing all data that can be extracted.
  */
-export class ExtractableData {
+export default class ExtractableData {
     extractor: Extractor = new Extractor();
     dataStore: DataStore;
     fileToSlot: Record<string, number>;

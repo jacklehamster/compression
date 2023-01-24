@@ -1,13 +1,9 @@
 import Loader from "./io/Loader";
 import TokenEncoder from "./compression/TokenEncoder";
 import Compressor from "./compression/Compressor";
-
-const exports = {
-  Loader,
-  Compressor,
-  TokenEncoder,
-}
-
+declare const exports: {
+    Loader: typeof Loader;
+    Compressor: typeof Compressor;
+    TokenEncoder: typeof TokenEncoder;
+};
 export default exports;
-
-globalThis.exports = exports;
