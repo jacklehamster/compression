@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "webpack && ts-node demo.ts",
+    "start": "webpack && tsc --resolveJsonModule --outdir out src/index.ts && ts-node demo.ts",
     "test": "mocha src/index.test.js"
   },
   "repository": {

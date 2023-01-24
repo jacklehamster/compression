@@ -12,8 +12,8 @@ enum EncoderEnum {
     FFLATE = 1,
 };
 
-const ENCODERS: ((() => Encoder) | undefined)[] = [
-    undefined,
+const ENCODERS: (() => Encoder | undefined)[] = [
+    () => undefined,
     () => new FFlateEncoder(),
 ]
 
@@ -90,7 +90,7 @@ export default class Compressor {
         finalStream.setNextUint8(0);
 
         const encoders: Encoder[] = encoderEnums
-            .map(encoderEnum => ENCODERS[encoderEnum]?.())
+            .map(encoderEnum => ENCODERS[encoderEnum]())
             .filter((encoder): encoder is Encoder => !!encoder);
 
         //  Write header
@@ -127,7 +127,7 @@ export default class Compressor {
             if (encoderEnum === EncoderEnum.NONE) {
                 break;
             }
-            const decoder = ENCODERS[encoderEnum]?.();
+            const decoder = ENCODERS[encoderEnum]();
             if (decoder) {
                 decoders.push(decoder);
             }

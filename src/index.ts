@@ -2,12 +2,12 @@ import Loader from "./io/Loader";
 import TokenEncoder from "./compression/TokenEncoder";
 import Compressor from "./compression/Compressor";
 
-const exports = {
+const exportedClasses = {
   Loader,
   Compressor,
   TokenEncoder,
 }
 
-export default exports;
+export default exportedClasses;
 
-globalThis.exports = exports;
+globalThis.exports = exportedClasses;
