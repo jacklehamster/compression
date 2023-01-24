@@ -35,10 +35,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 exports.__esModule = true;
-var md5 = require("md5");
-var Loader_1 = require("../io/Loader");
+var Loader_1 = __importDefault(require("../io/Loader"));
 var Token_1 = require("./Token");
+var blueimp_md5_1 = __importDefault(require("blueimp-md5"));
 /**
  * Class for spitting objects into tokens.
  */
@@ -121,7 +124,7 @@ var Tokenizer = /** @class */ (function () {
                 var hash = _a.hash;
                 return hash;
             });
-            var hash = md5(hashes.join(","));
+            var hash = (0, blueimp_md5_1["default"])(hashes.join(","));
             return this.registerToken(hash, item, registry, counter, file, hashes);
         }
         else if (type === "object") {
@@ -134,7 +137,7 @@ var Tokenizer = /** @class */ (function () {
                 var value = _a[1];
                 return value;
             }), registry, counter, file);
-            var hash = md5("".concat(keysToken.hash, "|").concat(valuesToken.hash));
+            var hash = (0, blueimp_md5_1["default"])("".concat(keysToken.hash, "|").concat(valuesToken.hash));
             return this.registerToken(hash, item, registry, counter, file, [keysToken.hash, valuesToken.hash]);
         }
         else if (type === "split") {
@@ -142,11 +145,11 @@ var Tokenizer = /** @class */ (function () {
             var separators = item.match(Token_1.SPLIT_REGEX);
             var chunksToken = this.tokenizeHelper(chunks, registry, counter, file);
             var separatorsToken = this.tokenizeHelper(separators, registry, counter, file);
-            var hash = md5("".concat(chunksToken.hash, "-").concat(separatorsToken.hash));
+            var hash = (0, blueimp_md5_1["default"])("".concat(chunksToken.hash, "-").concat(separatorsToken.hash));
             return this.registerToken(hash, item, registry, counter, file, [chunksToken.hash, separatorsToken.hash]);
         }
         else {
-            return this.registerToken(md5(JSON.stringify(item)), item, registry, counter, file);
+            return this.registerToken((0, blueimp_md5_1["default"])(JSON.stringify(item)), item, registry, counter, file);
         }
     };
     return Tokenizer;

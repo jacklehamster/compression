@@ -35,14 +35,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 exports.__esModule = true;
-var Reducer_1 = require("../reducer/Reducer");
+var Reducer_1 = __importDefault(require("../reducer/Reducer"));
 var stream_data_view_1 = require("stream-data-view");
-var TokenEncoder_1 = require("./TokenEncoder");
-var FFlateEncoder_1 = require("./FFlateEncoder");
+var TokenEncoder_1 = __importDefault(require("./TokenEncoder"));
+var FFlateEncoder_1 = __importDefault(require("./FFlateEncoder"));
 var package_json_1 = require("../../package.json");
-var Tokenizer_1 = require("../tokenizer/Tokenizer");
-var Extractor_1 = require("../expander/Extractor");
+var Tokenizer_1 = __importDefault(require("../tokenizer/Tokenizer"));
+var Extractor_1 = __importDefault(require("../expander/Extractor"));
 var EncoderEnum;
 (function (EncoderEnum) {
     EncoderEnum[EncoderEnum["NONE"] = 0] = "NONE";

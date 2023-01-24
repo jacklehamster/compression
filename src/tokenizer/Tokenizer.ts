@@ -1,8 +1,7 @@
-const md5 = require("md5");
 import Loader from "../io/Loader";
 import { Header } from "./Header";
 import Token, { getType, Hash, SPLIT_REGEX } from "./Token";
-
+import md5 from "blueimp-md5";
 /**
  * Class for spitting objects into tokens.
  */
