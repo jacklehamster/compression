@@ -25,6 +25,9 @@ var ExtractableData = /** @class */ (function () {
         this.config = __assign(__assign({}, DEFAULT_CONFIG), config);
         this.fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
         this.fileToSlot = Object.fromEntries(this.fileNames.map(function (file, index) { return [file, index]; }));
+        this.version = dataStore.version;
+        this.originalDataSize = dataStore.originalDataSize;
+        this.compressedSize = dataStore.compressedSize;
     }
     /**
      * Extract data form a stored file.

@@ -129,6 +129,7 @@ var Compressor = /** @class */ (function () {
         return new Extractor_1["default"](this.expandDataStore(arrayBuffer), config);
     };
     Compressor.prototype.compressDataStore = function (dataStore, encoderEnums) {
+        var _a;
         if (encoderEnums === void 0) { encoderEnums = [EncoderEnum.FFLATE]; }
         var streamDataView = new stream_data_view_1.StreamDataView();
         var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
@@ -137,8 +138,10 @@ var Compressor = /** @class */ (function () {
         //  Write fileNames
         tokenEncoder.encodeNumberArray(dataStore.files);
         var finalStream = new stream_data_view_1.StreamDataView();
+        //  Write version
         finalStream.setNextUint8(package_json_1.version.length);
         finalStream.setNextString(package_json_1.version);
+        //  Write encoders
         encoderEnums.forEach(function (encoderEnum) { return finalStream.setNextUint8(encoderEnum); });
         finalStream.setNextUint8(0);
         var encoders = encoderEnums
@@ -159,16 +162,16 @@ var Compressor = /** @class */ (function () {
             finalStream.setNextBytes(subBuffer);
         }
         finalStream.setNextUint32(0);
+        //  Write original data size
+        finalStream.setNextUint32((_a = dataStore.originalDataSize) !== null && _a !== void 0 ? _a : 0);
         return finalStream.getBuffer();
     };
     Compressor.prototype.expandDataStore = function (arrayBuffer) {
         var _this = this;
+        var compressedSize = arrayBuffer.byteLength;
         var input = arrayBuffer;
         var globalStream = new stream_data_view_1.StreamDataView(input);
-        var compressedVersion = globalStream.getNextString(globalStream.getNextUint8());
-        if (compressedVersion != package_json_1.version) {
-            console.warn("Compressor is v.%s but the data was compressed with v.%s", package_json_1.version, compressedVersion);
-        }
+        var version = globalStream.getNextString(globalStream.getNextUint8());
         var decoders = [];
         do {
             var encoderEnum = globalStream.getNextUint8();
@@ -180,9 +183,7 @@ var Compressor = /** @class */ (function () {
                 decoders.push(decoder);
             }
         } while (globalStream.getOffset() < globalStream.getLength());
-        console.log(decoders);
         var headerByteLength = globalStream.getNextUint32();
-        console.log(headerByteLength);
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
         var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
         var headerTokens = headerTokenEncoder.decodeTokens();
@@ -201,7 +202,17 @@ var Compressor = /** @class */ (function () {
             var tokenDecoder = new TokenEncoder_1["default"](streamDataView);
             return tokenDecoder.decodeTokens();
         };
+        //  The remaining from streamDataView is extra. Some compressed data don't have it.
+        var originalDataSize;
+        try {
+            originalDataSize = globalStream.getNextUint32() || undefined;
+        }
+        catch (e) {
+        }
         return {
+            version: version,
+            originalDataSize: originalDataSize,
+            compressedSize: compressedSize,
             headerTokens: headerTokens,
             files: files,
             getDataTokens: getDataTokens

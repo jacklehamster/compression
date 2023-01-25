@@ -19,7 +19,10 @@ export default class Tokenizer {
         }
         const sortedFiles = files.sort();
         const allData = await Promise.all(sortedFiles.map(this.loader.load));
-        return this.tokenize(Object.fromEntries(allData.map((data, index) => [sortedFiles[index], data])));
+        const header = this.tokenize(Object.fromEntries(allData.map((data, index) => [sortedFiles[index], data])));
+        const textEncoder = new TextEncoder();
+        header.originalDataSize = textEncoder.encode(JSON.stringify(allData)).byteLength;
+        return header;
     }
 
     /**

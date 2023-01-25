@@ -9,6 +9,9 @@ import { Header } from "../tokenizer/Header";
  * getDataTokens: function to retrieve the tokens for each file. Pass the index that corresponds with files.
  */
 export interface DataStore {
+    version?: string;
+    compressedSize?: number;
+    originalDataSize?: number;
     headerTokens: ReducedToken[];
     files: number[];
     getDataTokens(index: number): ReducedToken[] | undefined;
@@ -50,6 +53,7 @@ export default class Reducer {
         });
 
         return {
+            originalDataSize: header.originalDataSize,
             headerTokens,
             files,
             getDataTokens(index: number) {

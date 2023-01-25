@@ -48,6 +48,7 @@ var Reducer = /** @class */ (function () {
             return _this.createReducedTokens(tokens, subHashToIndex, headerTokens.length).concat(_this.createReducedTokens([root], subHashToIndex, headerTokens.length));
         });
         return {
+            originalDataSize: header.originalDataSize,
             headerTokens: headerTokens,
             files: files,
             getDataTokens: function (index) {

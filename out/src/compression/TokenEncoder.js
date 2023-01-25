@@ -682,7 +682,7 @@ var TokenEncoder = /** @class */ (function () {
             var decoder = new TokenEncoder(streamDataView);
             var reset = function () { return streamDataView.resetOffset(); };
             tester(encoder, decoder, reset);
-            console.log("\u2705 Passed test ".concat(index, "."));
+            console.info("\u2705 Passed test ".concat(index, "."));
         });
     };
     TokenEncoder.testAction = function (value, encode, reset, decode, check) {

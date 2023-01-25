@@ -22,11 +22,14 @@ const DEFAULT_CONFIG: ExtractionConfig = {
  * Class storing all data that can be extracted.
  */
 export default class ExtractableData {
-    extractor: Extractor = new Extractor();
-    dataStore: DataStore;
-    fileToSlot: Record<string, number>;
-    config: ExtractionConfig;
-    fileNames: string[];
+    readonly extractor: Extractor = new Extractor();
+    readonly dataStore: DataStore;
+    readonly fileToSlot: Record<string, number>;
+    readonly config: ExtractionConfig;
+    readonly fileNames: string[];
+    readonly version?: string;
+    readonly originalDataSize?: number;
+    readonly compressedSize?: number;
 
     constructor(dataStore: DataStore, config?: ExtractionConfig) {
         this.dataStore = dataStore;
@@ -36,6 +39,9 @@ export default class ExtractableData {
         };
         this.fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
         this.fileToSlot = Object.fromEntries(this.fileNames.map((file, index) => [file, index]));
+        this.version = dataStore.version;
+        this.originalDataSize = dataStore.originalDataSize;
+        this.compressedSize = dataStore.compressedSize;
     }
 
     /**

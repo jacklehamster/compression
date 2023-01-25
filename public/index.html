@@ -90,19 +90,24 @@
         const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json", false);
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
 
-        // try {
-        //  const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
-        //  console.log(eTest);
-        // } catch (e) {
-        //   console.error(e.message);
-        // }
+        try {
+         const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
+         const turtleData = eTest.extract("games/turtle/turtle.json", true);
+         console.log("Version", eTest.version);
+         console.log("Files stored:", eTest.files);
+         console.log("Turtle data", turtleData);
+         console.log("Original data size", eTest.originalDataSize);
+         console.log("Compressed size", eTest.compressedSize);
+        } catch (e) {
+          console.error(e.message);
+        }
       });
     </script>
 
     <script>
-      // console.log("Test token encoder");
-      // const { TokenEncoder } = exports;
-      // TokenEncoder.selfTest();
+      console.log("Test token encoder");
+      const { TokenEncoder } = exports;
+      TokenEncoder.selfTest();
     </script>
 	</body>
 </html>

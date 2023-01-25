@@ -15,11 +15,14 @@ export interface ExtractionConfig {
  * Class storing all data that can be extracted.
  */
 export default class ExtractableData {
-    extractor: Extractor;
-    dataStore: DataStore;
-    fileToSlot: Record<string, number>;
-    config: ExtractionConfig;
-    fileNames: string[];
+    readonly extractor: Extractor;
+    readonly dataStore: DataStore;
+    readonly fileToSlot: Record<string, number>;
+    readonly config: ExtractionConfig;
+    readonly fileNames: string[];
+    readonly version?: string;
+    readonly originalDataSize?: number;
+    readonly compressedSize?: number;
     constructor(dataStore: DataStore, config?: ExtractionConfig);
     /**
      * Extract data form a stored file.

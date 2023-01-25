@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3155,6 +3155,7 @@ var Compressor = /** @class */ (function () {
         return new Extractor_1["default"](this.expandDataStore(arrayBuffer), config);
     };
     Compressor.prototype.compressDataStore = function (dataStore, encoderEnums) {
+        var _a;
         if (encoderEnums === void 0) { encoderEnums = [EncoderEnum.FFLATE]; }
         var streamDataView = new stream_data_view_1.StreamDataView();
         var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
@@ -3163,8 +3164,10 @@ var Compressor = /** @class */ (function () {
         //  Write fileNames
         tokenEncoder.encodeNumberArray(dataStore.files);
         var finalStream = new stream_data_view_1.StreamDataView();
+        //  Write version
         finalStream.setNextUint8(package_json_1.version.length);
         finalStream.setNextString(package_json_1.version);
+        //  Write encoders
         encoderEnums.forEach(function (encoderEnum) { return finalStream.setNextUint8(encoderEnum); });
         finalStream.setNextUint8(0);
         var encoders = encoderEnums
@@ -3185,16 +3188,16 @@ var Compressor = /** @class */ (function () {
             finalStream.setNextBytes(subBuffer);
         }
         finalStream.setNextUint32(0);
+        //  Write original data size
+        finalStream.setNextUint32((_a = dataStore.originalDataSize) !== null && _a !== void 0 ? _a : 0);
         return finalStream.getBuffer();
     };
     Compressor.prototype.expandDataStore = function (arrayBuffer) {
         var _this = this;
+        var compressedSize = arrayBuffer.byteLength;
         var input = arrayBuffer;
         var globalStream = new stream_data_view_1.StreamDataView(input);
-        var compressedVersion = globalStream.getNextString(globalStream.getNextUint8());
-        if (compressedVersion != package_json_1.version) {
-            console.warn("Compressor is v.%s but the data was compressed with v.%s", package_json_1.version, compressedVersion);
-        }
+        var version = globalStream.getNextString(globalStream.getNextUint8());
         var decoders = [];
         do {
             var encoderEnum = globalStream.getNextUint8();
@@ -3206,9 +3209,7 @@ var Compressor = /** @class */ (function () {
                 decoders.push(decoder);
             }
         } while (globalStream.getOffset() < globalStream.getLength());
-        console.log(decoders);
         var headerByteLength = globalStream.getNextUint32();
-        console.log(headerByteLength);
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
         var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
         var headerTokens = headerTokenEncoder.decodeTokens();
@@ -3227,7 +3228,17 @@ var Compressor = /** @class */ (function () {
             var tokenDecoder = new TokenEncoder_1["default"](streamDataView);
             return tokenDecoder.decodeTokens();
         };
+        //  The remaining from streamDataView is extra. Some compressed data don't have it.
+        var originalDataSize;
+        try {
+            originalDataSize = globalStream.getNextUint32() || undefined;
+        }
+        catch (e) {
+        }
         return {
+            version: version,
+            originalDataSize: originalDataSize,
+            compressedSize: compressedSize,
             headerTokens: headerTokens,
             files: files,
             getDataTokens: getDataTokens
@@ -3962,7 +3973,7 @@ var TokenEncoder = /** @class */ (function () {
             var decoder = new TokenEncoder(streamDataView);
             var reset = function () { return streamDataView.resetOffset(); };
             tester(encoder, decoder, reset);
-            console.log("\u2705 Passed test ".concat(index, "."));
+            console.info("\u2705 Passed test ".concat(index, "."));
         });
     };
     TokenEncoder.testAction = function (value, encode, reset, decode, check) {
@@ -4005,6 +4016,9 @@ var ExtractableData = /** @class */ (function () {
         this.config = __assign(__assign({}, DEFAULT_CONFIG), config);
         this.fileNames = this.extractor.extractFileNames(dataStore.files, dataStore.headerTokens, this.config);
         this.fileToSlot = Object.fromEntries(this.fileNames.map(function (file, index) { return [file, index]; }));
+        this.version = dataStore.version;
+        this.originalDataSize = dataStore.originalDataSize;
+        this.compressedSize = dataStore.compressedSize;
     }
     /**
      * Extract data form a stored file.
@@ -4225,6 +4239,7 @@ var Reducer = /** @class */ (function () {
             return _this.createReducedTokens(tokens, subHashToIndex, headerTokens.length).concat(_this.createReducedTokens([root], subHashToIndex, headerTokens.length));
         });
         return {
+            originalDataSize: header.originalDataSize,
             headerTokens: headerTokens,
             files: files,
             getDataTokens: function (index) {
@@ -4340,7 +4355,7 @@ var Tokenizer = /** @class */ (function () {
             files[_i] = arguments[_i];
         }
         return __awaiter(this, void 0, void 0, function () {
-            var sortedFiles, allData;
+            var sortedFiles, allData, header, textEncoder;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -4351,7 +4366,10 @@ var Tokenizer = /** @class */ (function () {
                         return [4 /*yield*/, Promise.all(sortedFiles.map(this.loader.load))];
                     case 1:
                         allData = _a.sent();
-                        return [2 /*return*/, this.tokenize(Object.fromEntries(allData.map(function (data, index) { return [sortedFiles[index], data]; })))];
+                        header = this.tokenize(Object.fromEntries(allData.map(function (data, index) { return [sortedFiles[index], data]; })));
+                        textEncoder = new TextEncoder();
+                        header.originalDataSize = textEncoder.encode(JSON.stringify(allData)).byteLength;
+                        return [2 /*return*/, header];
                 }
             });
         });

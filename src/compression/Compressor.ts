@@ -84,8 +84,11 @@ export default class Compressor {
         tokenEncoder.encodeNumberArray(dataStore.files);
 
         const finalStream = new StreamDataView();
+        //  Write version
         finalStream.setNextUint8(version.length);
         finalStream.setNextString(version);
+
+        //  Write encoders
         encoderEnums.forEach(encoderEnum => finalStream.setNextUint8(encoderEnum));
         finalStream.setNextUint8(0);
 
@@ -111,16 +114,17 @@ export default class Compressor {
         }
         finalStream.setNextUint32(0);
 
+        //  Write original data size
+        finalStream.setNextUint32(dataStore.originalDataSize ?? 0);
+
         return finalStream.getBuffer();
     }
 
     expandDataStore(arrayBuffer: ArrayBuffer): DataStore {
+        const compressedSize = arrayBuffer.byteLength;
         let input = arrayBuffer;
         const globalStream = new StreamDataView(input);
-        const compressedVersion = globalStream.getNextString(globalStream.getNextUint8());
-       if (compressedVersion != version) {
-            console.warn(`Compressor is v.%s but the data was compressed with v.%s`, version, compressedVersion);
-       }
+        const version = globalStream.getNextString(globalStream.getNextUint8());
         const decoders: Encoder[] = [];
         do {
             const encoderEnum = globalStream.getNextUint8();
@@ -133,10 +137,7 @@ export default class Compressor {
             }
         } while(globalStream.getOffset() < globalStream.getLength());
 
-        console.log(decoders);
-
         const headerByteLength = globalStream.getNextUint32();
-        console.log(headerByteLength);
         const headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
 
         const headerTokenEncoder = new TokenEncoder(new StreamDataView(headerBuffer));
@@ -159,7 +160,17 @@ export default class Compressor {
             return tokenDecoder.decodeTokens();
         }
 
+        //  The remaining from streamDataView is extra. Some compressed data don't have it.
+        let originalDataSize;
+        try {
+            originalDataSize = globalStream.getNextUint32() || undefined;
+        } catch (e) {
+        }
+
         return {
+            version,
+            originalDataSize,
+            compressedSize,
             headerTokens,
             files,
             getDataTokens,

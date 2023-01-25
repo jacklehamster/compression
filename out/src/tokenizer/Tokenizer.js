@@ -60,7 +60,7 @@ var Tokenizer = /** @class */ (function () {
             files[_i] = arguments[_i];
         }
         return __awaiter(this, void 0, void 0, function () {
-            var sortedFiles, allData;
+            var sortedFiles, allData, header, textEncoder;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -71,7 +71,10 @@ var Tokenizer = /** @class */ (function () {
                         return [4 /*yield*/, Promise.all(sortedFiles.map(this.loader.load))];
                     case 1:
                         allData = _a.sent();
-                        return [2 /*return*/, this.tokenize(Object.fromEntries(allData.map(function (data, index) { return [sortedFiles[index], data]; })))];
+                        header = this.tokenize(Object.fromEntries(allData.map(function (data, index) { return [sortedFiles[index], data]; })));
+                        textEncoder = new TextEncoder();
+                        header.originalDataSize = textEncoder.encode(JSON.stringify(allData)).byteLength;
+                        return [2 /*return*/, header];
                 }
             });
         });
