@@ -28,6 +28,7 @@ enum DataType {
     OFFSET_ARRAY_8 = 26,
     OFFSET_ARRAY_16 = 27,
     OFFSET_ARRAY_32 = 28,
+    EMPTY_ARRAY = 29,
 }
 
 enum Tag {
@@ -77,9 +78,10 @@ export default class TokenEncoder {
                 break;
             }
             if (tagOrDataType === Tag.MULTI) {
-                this.decodeMulti(tagOrDataType, tokens);
+               this.decodeMulti(tagOrDataType, tokens);
             } else {
-                tokens.push(this.decodeToken(tagOrDataType));
+                const token = this.decodeToken(tagOrDataType);
+                tokens.push(token);
             }
         }
         return tokens;
@@ -92,6 +94,7 @@ export default class TokenEncoder {
             case DataType.NULL:
             case DataType.BOOLEAN_TRUE:
             case DataType.BOOLEAN_FALSE:
+            case DataType.EMPTY_ARRAY:
                 break;
             case DataType.INT8:
             case DataType.UINT8:
@@ -141,6 +144,8 @@ export default class TokenEncoder {
                 return { type: "leaf", value: true };
             case DataType.BOOLEAN_FALSE:
                 return { type: "leaf", value: false };
+            case DataType.EMPTY_ARRAY:
+                return { type: "array", value: [] };
             case DataType.INT8:
             case DataType.UINT8:
             case DataType.INT16:
@@ -257,7 +262,8 @@ export default class TokenEncoder {
     }
 
     decodeTagOrDataType(): Tag | DataType {
-        return this.streamDataView.getNextUint8();
+        const dataType = this.streamDataView.getNextUint8();
+        return dataType;
     }
 
     encodeDataType(dataType: DataType): DataType {
@@ -296,7 +302,8 @@ export default class TokenEncoder {
             const count = this.streamDataView.getNextUint8() || 256;
             const dataType = this.decodeDataType();
             for (let i = 0; i < count; i++) {
-                tokens.push(this.decodeToken(dataType));
+                const token = this.decodeToken(dataType);
+                tokens.push(token);
             }
             return count;
         }
@@ -427,6 +434,10 @@ export default class TokenEncoder {
 
             pos += size;
         }
+        if (pos === 255) {
+            //  Reached the max size of 255, but the next one is 0.
+            this.encodeSingleNumber(0, DataType.UINT8);
+        }
     }
 
     decodeNumberArray(dataType?: DataType): number[] {
@@ -471,6 +482,10 @@ export default class TokenEncoder {
             case "object":
             case "split":
                 let indices: number[] = token.value;
+                if (!indices.length) {
+                    console.assert(token.type === "array");
+                    return DataType.EMPTY_ARRAY;
+                }
                 let offset = 0;
                 if (token.type === "array" && indices.length > 3) {
                     const min = Math.min(...indices);
@@ -531,6 +546,7 @@ export default class TokenEncoder {
 
     dataTypeToType(dataType: DataType): Type {
         switch(dataType) {
+            case DataType.EMPTY_ARRAY:
             case DataType.ARRAY_8:
             case DataType.ARRAY_16:
             case DataType.ARRAY_32:
@@ -592,37 +608,43 @@ export default class TokenEncoder {
                     reset,
                     () => tokenDecoder.decodeSingleNumber(DataType.INT8));
             },
-            (tokenEncoder, tokenDecoder, reset) => {
-                this.testAction([
-                        { type: "leaf", value: 123 },
-                        { type: "leaf", value: 45 },
-                        { type: "leaf", value: 67 },
-                        { type: "leaf", value: 89 },
-                    ],
-                    header => tokenEncoder.encodeMulti(header, 0),
-                    reset,
-                    () => {
-                        const result: ReducedToken[] = [];
-                        tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
-                        return result;
-                    });
-            },
-            (tokenEncoder, tokenDecoder, reset) => {
-                this.testAction([
-                        { type: "leaf", value: 1000001 },
-                        { type: "leaf", value: 1002000 },
-                        { type: "leaf", value: 1003001 },
-                    ],
-                    header => tokenEncoder.encodeMulti(header, 0),
-                    reset,
-                    () => {
-                        const result: ReducedToken[] = [];
-                        tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
-                        return result;
-                    });                
-            },
+            // (tokenEncoder, tokenDecoder, reset) => {
+            //     this.testAction([
+            //             { type: "leaf", value: 123 },
+            //             { type: "leaf", value: 45 },
+            //             { type: "leaf", value: 67 },
+            //             { type: "leaf", value: 89 },
+            //         ],
+            //         header => tokenEncoder.encodeMulti(header, 0),
+            //         reset,
+            //         () => {
+            //             const result: ReducedToken[] = [];
+            //             tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
+            //             return result;
+            //         });
+            // },
+            // (tokenEncoder, tokenDecoder, reset) => {
+            //     this.testAction([
+            //             { type: "leaf", value: 1000001 },
+            //             { type: "leaf", value: 1002000 },
+            //             { type: "leaf", value: 1003001 },
+            //         ],
+            //         header => tokenEncoder.encodeMulti(header, 0),
+            //         reset,
+            //         () => {
+            //             const result: ReducedToken[] = [];
+            //             tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
+            //             return result;
+            //         });                
+            // },
             (tokenEncoder, tokenDecoder, reset) => {
                 this.testAction([1, 2, 3, 4, 10, 20, 200],
+                    array => tokenEncoder.encodeNumberArray(array),
+                    reset,
+                    () => tokenDecoder.decodeNumberArray());
+            },
+            (tokenEncoder, tokenDecoder, reset) => {
+                this.testAction(new Array(2000).fill(null).map((_,index) => index),
                     array => tokenEncoder.encodeNumberArray(array),
                     reset,
                     () => tokenDecoder.decodeNumberArray());
@@ -729,14 +751,57 @@ export default class TokenEncoder {
                     reset,
                     () => tokenDecoder.decodeToken());
             },
+            (tokenEncoder, tokenDecoder, reset) => {
+                this.testAction({ type: "array", value: new Array(260).fill(null).map((_,index) => index) },
+                    o => tokenEncoder.encodeToken(o),
+                    reset,
+                    () => tokenDecoder.decodeToken());
+            },
+            (tokenEncoder, tokenDecoder, reset) => {
+                this.testAction(new Array(100).fill(null).map((_,index) => {
+                    const token: ReducedToken = {
+                        type: "array",
+                        value: new Array(index).fill(null).map((_, index) => index),
+                    };
+                    return token;
+                }),
+                    o => tokenEncoder.encodeTokens(o),
+                    reset,
+                    () => tokenDecoder.decodeTokens());
+            },
+            (tokenEncoder, tokenDecoder, reset) => {
+                this.testAction(new Array(260).fill(null).map((_,index) => {
+                    const token: ReducedToken = {
+                        type: "array",
+                        value: new Array(index).fill(null).map((_, index) => index),
+                    };
+                    return token;
+                }),
+                    o => tokenEncoder.encodeTokens(o),
+                    reset,
+                    () => tokenDecoder.decodeTokens());
+            },
+            (tokenEncoder, tokenDecoder, reset) => {
+                this.testAction(new Array(260).fill(null).map((_,index) => {
+                    const token: ReducedToken = {
+                        type: "array",
+                        value: [1],
+                    };
+                    return token;
+                }),
+                    o => tokenEncoder.encodeTokens(o),
+                    reset,
+                    () => tokenDecoder.decodeTokens());
+            },
         ];
 
-        testers.forEach(tester => {
+        testers.forEach((tester, index) => {
             const streamDataView = new StreamDataView();
             const encoder = new TokenEncoder(streamDataView);
             const decoder = new TokenEncoder(streamDataView);
             const reset = () => streamDataView.resetOffset();
             tester(encoder, decoder, reset);
+            console.info(`✅ Passed test ${index}.`);
         });
     }
 

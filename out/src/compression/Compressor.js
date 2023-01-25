@@ -180,7 +180,9 @@ var Compressor = /** @class */ (function () {
                 decoders.push(decoder);
             }
         } while (globalStream.getOffset() < globalStream.getLength());
+        console.log(decoders);
         var headerByteLength = globalStream.getNextUint32();
+        console.log(headerByteLength);
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
         var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
         var headerTokens = headerTokenEncoder.decodeTokens();

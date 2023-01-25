@@ -133,7 +133,10 @@ export default class Compressor {
             }
         } while(globalStream.getOffset() < globalStream.getLength());
 
+        console.log(decoders);
+
         const headerByteLength = globalStream.getNextUint32();
+        console.log(headerByteLength);
         const headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
 
         const headerTokenEncoder = new TokenEncoder(new StreamDataView(headerBuffer));

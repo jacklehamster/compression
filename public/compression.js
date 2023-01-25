@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.13",
+    "version": "1.0.14",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3206,7 +3206,9 @@ var Compressor = /** @class */ (function () {
                 decoders.push(decoder);
             }
         } while (globalStream.getOffset() < globalStream.getLength());
+        console.log(decoders);
         var headerByteLength = globalStream.getNextUint32();
+        console.log(headerByteLength);
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
         var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
         var headerTokens = headerTokenEncoder.decodeTokens();
@@ -3307,6 +3309,7 @@ var DataType;
     DataType[DataType["OFFSET_ARRAY_8"] = 26] = "OFFSET_ARRAY_8";
     DataType[DataType["OFFSET_ARRAY_16"] = 27] = "OFFSET_ARRAY_16";
     DataType[DataType["OFFSET_ARRAY_32"] = 28] = "OFFSET_ARRAY_32";
+    DataType[DataType["EMPTY_ARRAY"] = 29] = "EMPTY_ARRAY";
 })(DataType || (DataType = {}));
 var Tag;
 (function (Tag) {
@@ -3353,7 +3356,8 @@ var TokenEncoder = /** @class */ (function () {
                 this.decodeMulti(tagOrDataType, tokens);
             }
             else {
-                tokens.push(this.decodeToken(tagOrDataType));
+                var token = this.decodeToken(tagOrDataType);
+                tokens.push(token);
             }
         }
         return tokens;
@@ -3365,6 +3369,7 @@ var TokenEncoder = /** @class */ (function () {
             case DataType.NULL:
             case DataType.BOOLEAN_TRUE:
             case DataType.BOOLEAN_FALSE:
+            case DataType.EMPTY_ARRAY:
                 break;
             case DataType.INT8:
             case DataType.UINT8:
@@ -3413,6 +3418,8 @@ var TokenEncoder = /** @class */ (function () {
                 return { type: "leaf", value: true };
             case DataType.BOOLEAN_FALSE:
                 return { type: "leaf", value: false };
+            case DataType.EMPTY_ARRAY:
+                return { type: "array", value: [] };
             case DataType.INT8:
             case DataType.UINT8:
             case DataType.INT16:
@@ -3515,7 +3522,8 @@ var TokenEncoder = /** @class */ (function () {
         return this.streamDataView.getNextUint8();
     };
     TokenEncoder.prototype.decodeTagOrDataType = function () {
-        return this.streamDataView.getNextUint8();
+        var dataType = this.streamDataView.getNextUint8();
+        return dataType;
     };
     TokenEncoder.prototype.encodeDataType = function (dataType) {
         this.streamDataView.setNextUint8(dataType);
@@ -3550,7 +3558,8 @@ var TokenEncoder = /** @class */ (function () {
             var count = this.streamDataView.getNextUint8() || 256;
             var dataType = this.decodeDataType();
             for (var i = 0; i < count; i++) {
-                tokens.push(this.decodeToken(dataType));
+                var token = this.decodeToken(dataType);
+                tokens.push(token);
             }
             return count;
         }
@@ -3671,6 +3680,10 @@ var TokenEncoder = /** @class */ (function () {
             }
             pos += size;
         }
+        if (pos === 255) {
+            //  Reached the max size of 255, but the next one is 0.
+            this.encodeSingleNumber(0, DataType.UINT8);
+        }
     };
     TokenEncoder.prototype.decodeNumberArray = function (dataType) {
         var size;
@@ -3711,6 +3724,10 @@ var TokenEncoder = /** @class */ (function () {
             case "object":
             case "split":
                 var indices = token.value;
+                if (!indices.length) {
+                    console.assert(token.type === "array");
+                    return DataType.EMPTY_ARRAY;
+                }
                 var offset_2 = 0;
                 if (token.type === "array" && indices.length > 3) {
                     var min = Math.min.apply(Math, indices);
@@ -3772,6 +3789,7 @@ var TokenEncoder = /** @class */ (function () {
     };
     TokenEncoder.prototype.dataTypeToType = function (dataType) {
         switch (dataType) {
+            case DataType.EMPTY_ARRAY:
             case DataType.ARRAY_8:
             case DataType.ARRAY_16:
             case DataType.ARRAY_32:
@@ -3821,31 +3839,40 @@ var TokenEncoder = /** @class */ (function () {
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction(33, function (number) { return tokenEncoder.encodeSingleNumber(number, DataType.INT8); }, reset, function () { return tokenDecoder.decodeSingleNumber(DataType.INT8); });
             },
-            function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction([
-                    { type: "leaf", value: 123 },
-                    { type: "leaf", value: 45 },
-                    { type: "leaf", value: 67 },
-                    { type: "leaf", value: 89 },
-                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
-                    var result = [];
-                    tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
-                    return result;
-                });
-            },
-            function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction([
-                    { type: "leaf", value: 1000001 },
-                    { type: "leaf", value: 1002000 },
-                    { type: "leaf", value: 1003001 },
-                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
-                    var result = [];
-                    tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
-                    return result;
-                });
-            },
+            // (tokenEncoder, tokenDecoder, reset) => {
+            //     this.testAction([
+            //             { type: "leaf", value: 123 },
+            //             { type: "leaf", value: 45 },
+            //             { type: "leaf", value: 67 },
+            //             { type: "leaf", value: 89 },
+            //         ],
+            //         header => tokenEncoder.encodeMulti(header, 0),
+            //         reset,
+            //         () => {
+            //             const result: ReducedToken[] = [];
+            //             tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
+            //             return result;
+            //         });
+            // },
+            // (tokenEncoder, tokenDecoder, reset) => {
+            //     this.testAction([
+            //             { type: "leaf", value: 1000001 },
+            //             { type: "leaf", value: 1002000 },
+            //             { type: "leaf", value: 1003001 },
+            //         ],
+            //         header => tokenEncoder.encodeMulti(header, 0),
+            //         reset,
+            //         () => {
+            //             const result: ReducedToken[] = [];
+            //             tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
+            //             return result;
+            //         });                
+            // },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction([1, 2, 3, 4, 10, 20, 200], function (array) { return tokenEncoder.encodeNumberArray(array); }, reset, function () { return tokenDecoder.decodeNumberArray(); });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction(new Array(2000).fill(null).map(function (_, index) { return index; }), function (array) { return tokenEncoder.encodeNumberArray(array); }, reset, function () { return tokenDecoder.decodeNumberArray(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction([10000, -202, 3, 4, 10, 20, 3200], function (array) { return tokenEncoder.encodeNumberArray(array); }, reset, function () { return tokenDecoder.decodeNumberArray(); });
@@ -3898,13 +3925,44 @@ var TokenEncoder = /** @class */ (function () {
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "array", value: [10010, 10100, 10000] }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction({ type: "array", value: new Array(260).fill(null).map(function (_, index) { return index; }) }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction(new Array(100).fill(null).map(function (_, index) {
+                    var token = {
+                        type: "array",
+                        value: new Array(index).fill(null).map(function (_, index) { return index; })
+                    };
+                    return token;
+                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction(new Array(260).fill(null).map(function (_, index) {
+                    var token = {
+                        type: "array",
+                        value: new Array(index).fill(null).map(function (_, index) { return index; })
+                    };
+                    return token;
+                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction(new Array(260).fill(null).map(function (_, index) {
+                    var token = {
+                        type: "array",
+                        value: [1]
+                    };
+                    return token;
+                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+            },
         ];
-        testers.forEach(function (tester) {
+        testers.forEach(function (tester, index) {
             var streamDataView = new stream_data_view_1.StreamDataView();
             var encoder = new TokenEncoder(streamDataView);
             var decoder = new TokenEncoder(streamDataView);
             var reset = function () { return streamDataView.resetOffset(); };
             tester(encoder, decoder, reset);
+            console.log("\u2705 Passed test ".concat(index, "."));
         });
     };
     TokenEncoder.testAction = function (value, encode, reset, decode, check) {

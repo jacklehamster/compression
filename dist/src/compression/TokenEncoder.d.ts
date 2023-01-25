@@ -26,7 +26,8 @@ declare enum DataType {
     ARRAY_32 = 25,
     OFFSET_ARRAY_8 = 26,
     OFFSET_ARRAY_16 = 27,
-    OFFSET_ARRAY_32 = 28
+    OFFSET_ARRAY_32 = 28,
+    EMPTY_ARRAY = 29
 }
 declare enum Tag {
     DONE = 100,

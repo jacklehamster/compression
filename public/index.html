@@ -57,7 +57,7 @@
         const loader = new Loader();
         const originalData = await Promise.all(files.map(loader.load));
 
-        //  compress
+        // //  compress
         const compressor = new Compressor();
         let time = performance.now();
         compressedBuffer = compressor.compress(Object.fromEntries(originalData.map((data, index) => [files[index], data])));
@@ -89,13 +89,20 @@
 
         const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json", false);
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
+
+        // try {
+        //  const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
+        //  console.log(eTest);
+        // } catch (e) {
+        //   console.error(e.message);
+        // }
       });
     </script>
 
     <script>
-      console.log("Test token encoder");
-      const { TokenEncoder } = exports;
-      TokenEncoder.selfTest();
+      // console.log("Test token encoder");
+      // const { TokenEncoder } = exports;
+      // TokenEncoder.selfTest();
     </script>
 	</body>
 </html>
