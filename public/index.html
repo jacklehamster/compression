@@ -94,7 +94,7 @@
          const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
          const turtleData = eTest.extract("games/turtle/turtle.json", true);
          console.log("Version", eTest.version);
-         console.log("Files stored:", eTest.files);
+         console.log("Files stored:", eTest.fileNames);
          console.log("Turtle data", turtleData);
          console.log("Original data size", eTest.originalDataSize);
          console.log("Compressed size", eTest.compressedSize);
