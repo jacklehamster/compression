@@ -1,6 +1,6 @@
 {
   "name": "@dobuki/compression",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "",
   "main": "out/src/index.js",
   "type": "module",
