@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
