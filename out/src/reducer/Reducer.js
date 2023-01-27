@@ -11,11 +11,13 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 exports.__esModule = true;
+var DataType_1 = require("../compression/DataType");
 /**
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
     function Reducer(debug) {
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
         this.debug = debug !== null && debug !== void 0 ? debug : false;
     }
     /**
@@ -56,15 +58,76 @@ var Reducer = /** @class */ (function () {
             }
         };
     };
+    /**
+     * Sort tokens by frequency.
+     */
+    Reducer.prototype.sortTokens = function (tokens) {
+        tokens.sort(function (t1, t2) { return t2.count - t1.count; });
+    };
+    /**
+     * Organize tokens in groups of 255
+     * @param tokens
+     */
+    Reducer.prototype.organizeTokens = function (tokens) {
+        var _this = this;
+        if (!tokens.length) {
+            return tokens;
+        }
+        var buckets = [];
+        tokens.forEach(function (token) {
+            var dataType = _this.dataTypeUtils.getFullTokenDataType(token);
+            var bucket = undefined;
+            for (var _i = 0, buckets_1 = buckets; _i < buckets_1.length; _i++) {
+                var b = buckets_1[_i];
+                if (b.length < 255 && _this.dataTypeUtils.getFullTokenDataType(b[0]) === dataType) {
+                    bucket = b;
+                    break;
+                }
+            }
+            if (!bucket) {
+                bucket = [];
+                buckets.push(bucket);
+            }
+            bucket.push(token);
+        });
+        buckets.forEach(function (bucket) {
+            var dataType = _this.dataTypeUtils.getFullTokenDataType(bucket[0]);
+            switch (dataType) {
+                case DataType_1.DataType.UINT8:
+                case DataType_1.DataType.UINT16:
+                case DataType_1.DataType.UINT32:
+                case DataType_1.DataType.INT8:
+                case DataType_1.DataType.INT16:
+                case DataType_1.DataType.INT32:
+                case DataType_1.DataType.FLOAT32:
+                case DataType_1.DataType.FLOAT64:
+                    bucket.sort(function (a, b) { return b.value - a.value; });
+                    break;
+                case DataType_1.DataType.STRING:
+                case DataType_1.DataType.UNICODE:
+                    bucket.sort(function (a, b) { return b.value.length - a.value.length; });
+                    break;
+                case DataType_1.DataType.ARRAY_8:
+                case DataType_1.DataType.ARRAY_16:
+                case DataType_1.DataType.ARRAY_32:
+                    bucket.sort(function (a, b) { return b.value.length - a.value.length; });
+                    break;
+            }
+        });
+        var resultTokens = [];
+        buckets.forEach(function (bucket) { return bucket.forEach(function (token) { return resultTokens.push(token); }); });
+        return resultTokens;
+    };
     Reducer.prototype.createReducedTokens = function (tokens, hashToIndex, offset) {
         var _this = this;
         if (offset === void 0) { offset = 0; }
-        var sortedTokens = tokens.sort(function (t1, t2) { return t2.count - t1.count; });
-        sortedTokens.forEach(function (_a, index) {
+        this.sortTokens(tokens);
+        var organizedTokens = this.organizeTokens(tokens);
+        organizedTokens.forEach(function (_a, index) {
             var hash = _a.hash;
-            hashToIndex[hash] = index + offset;
+            return hashToIndex[hash] = index + offset;
         });
-        return sortedTokens.map(function (token) {
+        return organizedTokens.map(function (token) {
             var _a, _b;
             return (__assign({ type: token.type, value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value }, _this.debug ? { debug: token.value } : {}));
         });

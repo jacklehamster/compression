@@ -1,5 +1,6 @@
 import { ReducedToken } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
+import { DataTypeUtils } from "../compression/DataType";
 /**
  * Stores all information needed to extract data.
  *
@@ -20,6 +21,7 @@ export interface DataStore {
  */
 export default class Reducer {
     debug: boolean;
+    dataTypeUtils: DataTypeUtils;
     constructor(debug?: boolean);
     /**
      * Reduce header with smaller tokens for storage
@@ -28,5 +30,14 @@ export default class Reducer {
      * @returns DataStorage object that's the minimum we can store.
      */
     reduce(header: Header): DataStore;
+    /**
+     * Sort tokens by frequency.
+     */
+    private sortTokens;
+    /**
+     * Organize tokens in groups of 255
+     * @param tokens
+     */
+    private organizeTokens;
     private createReducedTokens;
 }

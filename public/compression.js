@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3248,7 +3248,223 @@ var Compressor = /** @class */ (function () {
 }());
 exports["default"] = Compressor;
 
-},{"../../package.json":5,"../expander/Extractor":9,"../reducer/Reducer":12,"../tokenizer/Tokenizer":14,"./FFlateEncoder":7,"./TokenEncoder":8,"stream-data-view":4}],7:[function(require,module,exports){
+},{"../../package.json":5,"../expander/Extractor":10,"../reducer/Reducer":13,"../tokenizer/Tokenizer":15,"./FFlateEncoder":8,"./TokenEncoder":9,"stream-data-view":4}],7:[function(require,module,exports){
+"use strict";
+exports.__esModule = true;
+exports.DataTypeUtils = exports.NUMBER_DATA_TYPES = exports.DataType = void 0;
+var DataType;
+(function (DataType) {
+    DataType[DataType["UNDEFINED"] = 0] = "UNDEFINED";
+    DataType[DataType["NULL"] = 1] = "NULL";
+    DataType[DataType["BOOLEAN_FALSE"] = 2] = "BOOLEAN_FALSE";
+    DataType[DataType["BOOLEAN_TRUE"] = 3] = "BOOLEAN_TRUE";
+    DataType[DataType["INT8"] = 4] = "INT8";
+    DataType[DataType["UINT8"] = 5] = "UINT8";
+    DataType[DataType["INT16"] = 6] = "INT16";
+    DataType[DataType["UINT16"] = 7] = "UINT16";
+    DataType[DataType["INT32"] = 8] = "INT32";
+    DataType[DataType["UINT32"] = 9] = "UINT32";
+    DataType[DataType["FLOAT32"] = 10] = "FLOAT32";
+    DataType[DataType["FLOAT64"] = 11] = "FLOAT64";
+    DataType[DataType["STRING"] = 12] = "STRING";
+    DataType[DataType["UNICODE"] = 13] = "UNICODE";
+    DataType[DataType["OBJECT_8"] = 17] = "OBJECT_8";
+    DataType[DataType["OBJECT_16"] = 18] = "OBJECT_16";
+    DataType[DataType["OBJECT_32"] = 19] = "OBJECT_32";
+    DataType[DataType["SPLIT_8"] = 20] = "SPLIT_8";
+    DataType[DataType["SPLIT_16"] = 21] = "SPLIT_16";
+    DataType[DataType["SPLIT_32"] = 22] = "SPLIT_32";
+    DataType[DataType["ARRAY_8"] = 23] = "ARRAY_8";
+    DataType[DataType["ARRAY_16"] = 24] = "ARRAY_16";
+    DataType[DataType["ARRAY_32"] = 25] = "ARRAY_32";
+    DataType[DataType["OFFSET_ARRAY_8"] = 26] = "OFFSET_ARRAY_8";
+    DataType[DataType["OFFSET_ARRAY_16"] = 27] = "OFFSET_ARRAY_16";
+    DataType[DataType["OFFSET_ARRAY_32"] = 28] = "OFFSET_ARRAY_32";
+    DataType[DataType["EMPTY_ARRAY"] = 29] = "EMPTY_ARRAY";
+})(DataType = exports.DataType || (exports.DataType = {}));
+exports.NUMBER_DATA_TYPES = [
+    DataType.UINT8,
+    DataType.INT8,
+    DataType.UINT16,
+    DataType.INT16,
+    DataType.UINT32,
+    DataType.INT32,
+    DataType.FLOAT32,
+    DataType.FLOAT64,
+];
+var DataTypeUtils = /** @class */ (function () {
+    function DataTypeUtils() {
+    }
+    DataTypeUtils.prototype.numberSatisfyDataType = function (value, dataType) {
+        var hasDecimal = value % 1 !== 0;
+        if (hasDecimal) {
+            switch (dataType) {
+                case DataType.FLOAT32:
+                    return Math.fround(value) === value;
+                case DataType.FLOAT64:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        switch (dataType) {
+            case DataType.UINT8:
+                return value >= 0 && value <= 255;
+            case DataType.INT8:
+                return value >= -128 && value <= 127;
+            case DataType.UINT16:
+                return value >= 0 && value <= 65535;
+            case DataType.INT16:
+                return value >= -32768 && value <= 32767;
+            case DataType.UINT32:
+                return value >= 0;
+            case DataType.INT32:
+                return true;
+        }
+        return false;
+    };
+    DataTypeUtils.prototype.getBestType = function (array) {
+        var _this = this;
+        if (array.some(function (number) { return number % 1 !== 0; })) {
+            //  decimal
+            if (array.every(function (number) { return _this.numberSatisfyDataType(number, DataType.FLOAT32); })) {
+                return DataType.FLOAT32;
+            }
+            return DataType.FLOAT64;
+        }
+        var min = Math.min.apply(Math, array);
+        var max = Math.max.apply(Math, array);
+        for (var _i = 0, NUMBER_DATA_TYPES_1 = exports.NUMBER_DATA_TYPES; _i < NUMBER_DATA_TYPES_1.length; _i++) {
+            var dataType = NUMBER_DATA_TYPES_1[_i];
+            if (this.numberSatisfyDataType(min, dataType) && this.numberSatisfyDataType(max, dataType)) {
+                return dataType;
+            }
+        }
+        return DataType.FLOAT64;
+    };
+    DataTypeUtils.prototype.getNumberDataType = function (value) {
+        for (var _i = 0, NUMBER_DATA_TYPES_2 = exports.NUMBER_DATA_TYPES; _i < NUMBER_DATA_TYPES_2.length; _i++) {
+            var type = NUMBER_DATA_TYPES_2[_i];
+            if (this.numberSatisfyDataType(value, type)) {
+                return type;
+            }
+        }
+        return DataType.UNDEFINED;
+    };
+    DataTypeUtils.prototype.getStringDataType = function (value) {
+        var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
+        if (letterCodes.every(function (code) { return code <= 255; })) {
+            return DataType.STRING;
+        }
+        else {
+            return DataType.UNICODE;
+        }
+    };
+    DataTypeUtils.prototype.getFullTokenDataType = function (token) {
+        switch (token.type) {
+            case "array":
+                return DataType.ARRAY_8;
+            case "object":
+                return DataType.OBJECT_8;
+            case "split":
+                return DataType.SPLIT_8;
+            default:
+                return this.getDataType(token);
+        }
+    };
+    DataTypeUtils.prototype.getDataType = function (token) {
+        switch (token.type) {
+            case "array":
+            case "object":
+            case "split":
+                var indices = token.value;
+                if (!indices.length) {
+                    console.assert(token.type === "array");
+                    return DataType.EMPTY_ARRAY;
+                }
+                var offset_1 = 0;
+                if (token.type === "array" && indices.length > 3) {
+                    var min = Math.min.apply(Math, indices);
+                    var max = Math.max.apply(Math, indices);
+                    if (this.getNumberDataType(max - min) !== this.getNumberDataType(max)) {
+                        offset_1 = min;
+                    }
+                    indices = indices.map(function (value) { return value - offset_1; });
+                }
+                var bestType = this.getBestType(indices);
+                switch (token.type) {
+                    case "object":
+                        return bestType === DataType.UINT8
+                            ? DataType.OBJECT_8
+                            : bestType === DataType.UINT16
+                                ? DataType.OBJECT_16
+                                : DataType.OBJECT_32;
+                    case "split":
+                        return bestType === DataType.UINT8
+                            ? DataType.SPLIT_8
+                            : bestType === DataType.UINT16
+                                ? DataType.SPLIT_16
+                                : DataType.SPLIT_32;
+                    case "array":
+                        if (offset_1) {
+                            return bestType === DataType.UINT8
+                                ? DataType.OFFSET_ARRAY_8
+                                : bestType === DataType.UINT16
+                                    ? DataType.OFFSET_ARRAY_16
+                                    : DataType.OFFSET_ARRAY_32;
+                        }
+                        else {
+                            return bestType === DataType.UINT8
+                                ? DataType.ARRAY_8
+                                : bestType === DataType.UINT16
+                                    ? DataType.ARRAY_16
+                                    : DataType.ARRAY_32;
+                        }
+                }
+            case "leaf":
+                if (token.value === undefined) {
+                    return DataType.UNDEFINED;
+                }
+                else if (token.value === null) {
+                    return DataType.NULL;
+                }
+                else {
+                    switch (typeof token.value) {
+                        case "boolean":
+                            return token.value ? DataType.BOOLEAN_TRUE : DataType.BOOLEAN_FALSE;
+                        case "string":
+                            return this.getStringDataType(token.value);
+                        case "number":
+                            return this.getNumberDataType(token.value);
+                    }
+                }
+        }
+        throw new Error("Unrecognized type for ".concat(token.type, " value: ").concat(token.value));
+    };
+    DataTypeUtils.prototype.dataTypeToType = function (dataType) {
+        switch (dataType) {
+            case DataType.EMPTY_ARRAY:
+            case DataType.ARRAY_8:
+            case DataType.ARRAY_16:
+            case DataType.ARRAY_32:
+                return "array";
+            case DataType.OBJECT_8:
+            case DataType.OBJECT_16:
+            case DataType.OBJECT_32:
+                return "object";
+            case DataType.SPLIT_8:
+            case DataType.SPLIT_16:
+            case DataType.SPLIT_32:
+                return "split";
+            default:
+                return "leaf";
+        }
+    };
+    return DataTypeUtils;
+}());
+exports.DataTypeUtils = DataTypeUtils;
+
+},{}],8:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -3288,58 +3504,21 @@ var FFlateEncoder = /** @class */ (function () {
 }());
 exports["default"] = FFlateEncoder;
 
-},{"fflate":2}],8:[function(require,module,exports){
+},{"fflate":2}],9:[function(require,module,exports){
 "use strict";
 exports.__esModule = true;
+//18033
 var stream_data_view_1 = require("stream-data-view");
-var DataType;
-(function (DataType) {
-    DataType[DataType["UNDEFINED"] = 0] = "UNDEFINED";
-    DataType[DataType["NULL"] = 1] = "NULL";
-    DataType[DataType["BOOLEAN_FALSE"] = 2] = "BOOLEAN_FALSE";
-    DataType[DataType["BOOLEAN_TRUE"] = 3] = "BOOLEAN_TRUE";
-    DataType[DataType["INT8"] = 4] = "INT8";
-    DataType[DataType["UINT8"] = 5] = "UINT8";
-    DataType[DataType["INT16"] = 6] = "INT16";
-    DataType[DataType["UINT16"] = 7] = "UINT16";
-    DataType[DataType["INT32"] = 8] = "INT32";
-    DataType[DataType["UINT32"] = 9] = "UINT32";
-    DataType[DataType["FLOAT32"] = 10] = "FLOAT32";
-    DataType[DataType["FLOAT64"] = 11] = "FLOAT64";
-    DataType[DataType["STRING"] = 12] = "STRING";
-    DataType[DataType["UNICODE"] = 13] = "UNICODE";
-    DataType[DataType["OBJECT_8"] = 17] = "OBJECT_8";
-    DataType[DataType["OBJECT_16"] = 18] = "OBJECT_16";
-    DataType[DataType["OBJECT_32"] = 19] = "OBJECT_32";
-    DataType[DataType["SPLIT_8"] = 20] = "SPLIT_8";
-    DataType[DataType["SPLIT_16"] = 21] = "SPLIT_16";
-    DataType[DataType["SPLIT_32"] = 22] = "SPLIT_32";
-    DataType[DataType["ARRAY_8"] = 23] = "ARRAY_8";
-    DataType[DataType["ARRAY_16"] = 24] = "ARRAY_16";
-    DataType[DataType["ARRAY_32"] = 25] = "ARRAY_32";
-    DataType[DataType["OFFSET_ARRAY_8"] = 26] = "OFFSET_ARRAY_8";
-    DataType[DataType["OFFSET_ARRAY_16"] = 27] = "OFFSET_ARRAY_16";
-    DataType[DataType["OFFSET_ARRAY_32"] = 28] = "OFFSET_ARRAY_32";
-    DataType[DataType["EMPTY_ARRAY"] = 29] = "EMPTY_ARRAY";
-})(DataType || (DataType = {}));
+var DataType_1 = require("./DataType");
 var Tag;
 (function (Tag) {
     Tag[Tag["DONE"] = 100] = "DONE";
     Tag[Tag["MULTI"] = 101] = "MULTI";
 })(Tag || (Tag = {}));
 ;
-var NUMBER_DATA_TYPES = [
-    DataType.UINT8,
-    DataType.INT8,
-    DataType.UINT16,
-    DataType.INT16,
-    DataType.UINT32,
-    DataType.INT32,
-    DataType.FLOAT32,
-    DataType.FLOAT64,
-];
 var TokenEncoder = /** @class */ (function () {
     function TokenEncoder(streamDataView) {
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
         this.streamDataView = streamDataView;
     }
     TokenEncoder.prototype.encodeTokens = function (tokens) {
@@ -3349,128 +3528,116 @@ var TokenEncoder = /** @class */ (function () {
             if (count) {
                 pos += count;
             }
-            else {
-                this.encodeToken(tokens[pos]);
-                pos++;
-            }
         }
-        this.encodeTag(Tag.DONE);
+        this.encodeMulti([], pos);
     };
     TokenEncoder.prototype.decodeTokens = function () {
         var tokens = [];
         while (this.streamDataView.getOffset() < this.streamDataView.getLength()) {
-            var tagOrDataType = this.decodeTagOrDataType();
-            if (tagOrDataType === Tag.DONE) {
+            if (!this.decodeMulti(tokens)) {
                 break;
-            }
-            if (tagOrDataType === Tag.MULTI) {
-                this.decodeMulti(tagOrDataType, tokens);
-            }
-            else {
-                var token = this.decodeToken(tagOrDataType);
-                tokens.push(token);
             }
         }
         return tokens;
     };
-    TokenEncoder.prototype.encodeToken = function (token, dataType) {
-        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getDataType(token));
+    TokenEncoder.prototype.encodeToken = function (token, dataType, multiInfo) {
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getDataType(token));
         switch (usedDataType) {
-            case DataType.UNDEFINED:
-            case DataType.NULL:
-            case DataType.BOOLEAN_TRUE:
-            case DataType.BOOLEAN_FALSE:
-            case DataType.EMPTY_ARRAY:
+            case DataType_1.DataType.UNDEFINED:
+            case DataType_1.DataType.NULL:
+            case DataType_1.DataType.BOOLEAN_TRUE:
+            case DataType_1.DataType.BOOLEAN_FALSE:
+            case DataType_1.DataType.EMPTY_ARRAY:
                 break;
-            case DataType.INT8:
-            case DataType.UINT8:
-            case DataType.INT16:
-            case DataType.UINT16:
-            case DataType.INT32:
-            case DataType.UINT32:
-            case DataType.FLOAT32:
-            case DataType.FLOAT64:
+            case DataType_1.DataType.INT8:
+            case DataType_1.DataType.UINT8:
+            case DataType_1.DataType.INT16:
+            case DataType_1.DataType.UINT16:
+            case DataType_1.DataType.INT32:
+            case DataType_1.DataType.UINT32:
+            case DataType_1.DataType.FLOAT32:
+            case DataType_1.DataType.FLOAT64:
                 this.encodeSingleNumber(token.value, usedDataType);
                 break;
-            case DataType.STRING:
-            case DataType.UNICODE:
-                this.encodeString(token.value, usedDataType);
+            case DataType_1.DataType.STRING:
+            case DataType_1.DataType.UNICODE:
+                this.encodeString(token.value, usedDataType, multiInfo);
                 break;
-            case DataType.OBJECT_8:
-            case DataType.OBJECT_16:
-            case DataType.OBJECT_32:
+            case DataType_1.DataType.OBJECT_8:
+            case DataType_1.DataType.OBJECT_16:
+            case DataType_1.DataType.OBJECT_32:
                 this.encodeObjectToken(token, usedDataType);
                 break;
-            case DataType.SPLIT_8:
-            case DataType.SPLIT_16:
-            case DataType.SPLIT_32:
+            case DataType_1.DataType.SPLIT_8:
+            case DataType_1.DataType.SPLIT_16:
+            case DataType_1.DataType.SPLIT_32:
                 this.encodeSplitToken(token, usedDataType);
                 break;
-            case DataType.ARRAY_8:
-            case DataType.ARRAY_16:
-            case DataType.ARRAY_32:
-            case DataType.OFFSET_ARRAY_8:
-            case DataType.OFFSET_ARRAY_16:
-            case DataType.OFFSET_ARRAY_32:
+            case DataType_1.DataType.ARRAY_8:
+            case DataType_1.DataType.ARRAY_16:
+            case DataType_1.DataType.ARRAY_32:
+            case DataType_1.DataType.OFFSET_ARRAY_8:
+            case DataType_1.DataType.OFFSET_ARRAY_16:
+            case DataType_1.DataType.OFFSET_ARRAY_32:
                 this.encodeArrayToken(token, usedDataType);
                 break;
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
     };
-    TokenEncoder.prototype.decodeToken = function (dataType) {
+    TokenEncoder.prototype.decodeToken = function (dataType, multiInfo) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
         switch (usedDataType) {
-            case DataType.UNDEFINED:
+            case DataType_1.DataType.UNDEFINED:
                 return { type: "leaf", value: undefined };
-            case DataType.NULL:
+            case DataType_1.DataType.NULL:
                 return { type: "leaf", value: null };
-            case DataType.BOOLEAN_TRUE:
+            case DataType_1.DataType.BOOLEAN_TRUE:
                 return { type: "leaf", value: true };
-            case DataType.BOOLEAN_FALSE:
+            case DataType_1.DataType.BOOLEAN_FALSE:
                 return { type: "leaf", value: false };
-            case DataType.EMPTY_ARRAY:
+            case DataType_1.DataType.EMPTY_ARRAY:
                 return { type: "array", value: [] };
-            case DataType.INT8:
-            case DataType.UINT8:
-            case DataType.INT16:
-            case DataType.UINT16:
-            case DataType.INT32:
-            case DataType.UINT32:
-            case DataType.FLOAT32:
-            case DataType.FLOAT64:
+            case DataType_1.DataType.INT8:
+            case DataType_1.DataType.UINT8:
+            case DataType_1.DataType.INT16:
+            case DataType_1.DataType.UINT16:
+            case DataType_1.DataType.INT32:
+            case DataType_1.DataType.UINT32:
+            case DataType_1.DataType.FLOAT32:
+            case DataType_1.DataType.FLOAT64:
                 return { type: "leaf", value: this.decodeSingleNumber(usedDataType) };
-            case DataType.STRING:
-            case DataType.UNICODE:
-                return { type: "leaf", value: this.decodeString(usedDataType) };
-            case DataType.OBJECT_8:
-            case DataType.OBJECT_16:
-            case DataType.OBJECT_32:
+            case DataType_1.DataType.STRING:
+            case DataType_1.DataType.UNICODE:
+                return { type: "leaf", value: this.decodeString(usedDataType, multiInfo) };
+            case DataType_1.DataType.OBJECT_8:
+            case DataType_1.DataType.OBJECT_16:
+            case DataType_1.DataType.OBJECT_32:
                 return this.decodeObjectToken(usedDataType);
-            case DataType.SPLIT_8:
-            case DataType.SPLIT_16:
-            case DataType.SPLIT_32:
+            case DataType_1.DataType.SPLIT_8:
+            case DataType_1.DataType.SPLIT_16:
+            case DataType_1.DataType.SPLIT_32:
                 return this.decodeSplitToken(usedDataType);
-            case DataType.ARRAY_8:
-            case DataType.ARRAY_16:
-            case DataType.ARRAY_32:
-            case DataType.OFFSET_ARRAY_8:
-            case DataType.OFFSET_ARRAY_16:
-            case DataType.OFFSET_ARRAY_32:
+            case DataType_1.DataType.ARRAY_8:
+            case DataType_1.DataType.ARRAY_16:
+            case DataType_1.DataType.ARRAY_32:
+            case DataType_1.DataType.OFFSET_ARRAY_8:
+            case DataType_1.DataType.OFFSET_ARRAY_16:
+            case DataType_1.DataType.OFFSET_ARRAY_32:
                 return this.decodeArrayToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
     };
     TokenEncoder.prototype.isOffsetDataType = function (dataType) {
-        return dataType === DataType.OFFSET_ARRAY_8 || dataType === DataType.OFFSET_ARRAY_16 || dataType === DataType.OFFSET_ARRAY_32;
+        return dataType === DataType_1.DataType.OFFSET_ARRAY_8 || dataType === DataType_1.DataType.OFFSET_ARRAY_16 || dataType === DataType_1.DataType.OFFSET_ARRAY_32;
     };
     TokenEncoder.prototype.encodeArrayToken = function (arrayToken, dataType) {
-        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getDataType(arrayToken));
-        var numberType = usedDataType === DataType.ARRAY_8 || usedDataType === DataType.OFFSET_ARRAY_8
-            ? DataType.UINT8
-            : usedDataType === DataType.ARRAY_16 || usedDataType === DataType.OFFSET_ARRAY_16
-                ? DataType.UINT16 : DataType.UINT32;
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getDataType(arrayToken));
+        var numberType = usedDataType === DataType_1.DataType.ARRAY_8 || usedDataType === DataType_1.DataType.OFFSET_ARRAY_8
+            ? DataType_1.DataType.UINT8
+            : usedDataType === DataType_1.DataType.ARRAY_16 || usedDataType === DataType_1.DataType.OFFSET_ARRAY_16
+                ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
         var indices = arrayToken.value;
         if (this.isOffsetDataType(usedDataType)) {
             var offset_1 = Math.min.apply(Math, indices);
@@ -3485,10 +3652,10 @@ var TokenEncoder = /** @class */ (function () {
         if (this.isOffsetDataType(usedDataType)) {
             offset = this.decodeSingleNumber();
         }
-        var numberType = usedDataType === DataType.ARRAY_8 || usedDataType === DataType.OFFSET_ARRAY_8
-            ? DataType.UINT8
-            : usedDataType === DataType.ARRAY_16 || usedDataType === DataType.OFFSET_ARRAY_16
-                ? DataType.UINT16 : DataType.UINT32;
+        var numberType = usedDataType === DataType_1.DataType.ARRAY_8 || usedDataType === DataType_1.DataType.OFFSET_ARRAY_8
+            ? DataType_1.DataType.UINT8
+            : usedDataType === DataType_1.DataType.ARRAY_16 || usedDataType === DataType_1.DataType.OFFSET_ARRAY_16
+                ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
         var indices = this.decodeNumberArray(numberType)
             .map(function (value) { return value + offset; });
         return {
@@ -3497,30 +3664,30 @@ var TokenEncoder = /** @class */ (function () {
         };
     };
     TokenEncoder.prototype.encodeObjectToken = function (objectToken, dataType) {
-        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getDataType(objectToken));
-        var numberType = usedDataType === DataType.OBJECT_8 ? DataType.UINT8 : usedDataType === DataType.OBJECT_16 ? DataType.UINT16 : DataType.UINT32;
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getDataType(objectToken));
+        var numberType = usedDataType === DataType_1.DataType.OBJECT_8 ? DataType_1.DataType.UINT8 : usedDataType === DataType_1.DataType.OBJECT_16 ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
         var _a = objectToken.value, keysIndex = _a[0], valuesIndex = _a[1];
         this.encodeSingleNumber(keysIndex, numberType);
         this.encodeSingleNumber(valuesIndex, numberType);
     };
     TokenEncoder.prototype.decodeObjectToken = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        var numberType = usedDataType === DataType.OBJECT_8 ? DataType.UINT8 : usedDataType === DataType.OBJECT_16 ? DataType.UINT16 : DataType.UINT32;
+        var numberType = usedDataType === DataType_1.DataType.OBJECT_8 ? DataType_1.DataType.UINT8 : usedDataType === DataType_1.DataType.OBJECT_16 ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
         return {
             type: "object",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)]
         };
     };
     TokenEncoder.prototype.encodeSplitToken = function (splitToken, dataType) {
-        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getDataType(splitToken));
-        var numberType = usedDataType === DataType.SPLIT_8 ? DataType.UINT8 : usedDataType === DataType.SPLIT_16 ? DataType.UINT16 : DataType.UINT32;
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getDataType(splitToken));
+        var numberType = usedDataType === DataType_1.DataType.SPLIT_8 ? DataType_1.DataType.UINT8 : usedDataType === DataType_1.DataType.SPLIT_16 ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
         var _a = splitToken.value, chunksIndex = _a[0], separatorsIndex = _a[1];
         this.encodeSingleNumber(chunksIndex, numberType);
         this.encodeSingleNumber(separatorsIndex, numberType);
     };
     TokenEncoder.prototype.decodeSplitToken = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        var numberType = usedDataType === DataType.SPLIT_8 ? DataType.UINT8 : usedDataType === DataType.SPLIT_16 ? DataType.UINT16 : DataType.UINT32;
+        var numberType = usedDataType === DataType_1.DataType.SPLIT_8 ? DataType_1.DataType.UINT8 : usedDataType === DataType_1.DataType.SPLIT_16 ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
         return {
             type: "split",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)]
@@ -3544,63 +3711,65 @@ var TokenEncoder = /** @class */ (function () {
         return this.streamDataView.getNextUint8();
     };
     TokenEncoder.prototype.encodeMulti = function (tokens, pos) {
-        var firstType = this.getDataType(tokens[pos]);
+        if (pos >= tokens.length) {
+            this.encodeSingleNumber(0, DataType_1.DataType.UINT8);
+            return 0;
+        }
+        var firstType = this.dataTypeUtils.getDataType(tokens[pos]);
         var multiCount;
-        var maxCount = Math.min(tokens.length - pos, 256);
+        var maxCount = Math.min(tokens.length - pos, 255);
         for (multiCount = 1; multiCount < maxCount; multiCount++) {
-            if (this.getDataType(tokens[pos + multiCount]) !== firstType) {
+            if (this.dataTypeUtils.getDataType(tokens[pos + multiCount]) !== firstType) {
                 break;
             }
         }
-        if (multiCount > 2) {
-            //  encode a multi, meaning that the same type is going to get repeated multiple times
-            this.encodeTag(Tag.MULTI);
-            this.encodeSingleNumber(multiCount % 256, DataType.UINT8);
-            this.encodeDataType(firstType);
-            for (var i = 0; i < multiCount; i++) {
-                this.encodeToken(tokens[pos + i], firstType);
-            }
-            return multiCount;
+        //  encode a multi, meaning that the same type is going to get repeated multiple times
+        this.encodeSingleNumber(multiCount, DataType_1.DataType.UINT8);
+        this.encodeDataType(firstType);
+        var multiInfo = {};
+        for (var i = 0; i < multiCount; i++) {
+            this.encodeToken(tokens[pos + i], firstType, multiInfo);
         }
-        return 0;
+        return multiCount;
     };
-    TokenEncoder.prototype.decodeMulti = function (tag, tokens) {
-        if (tag === Tag.MULTI) {
-            var count = this.streamDataView.getNextUint8() || 256;
-            var dataType = this.decodeDataType();
-            for (var i = 0; i < count; i++) {
-                var token = this.decodeToken(dataType);
-                tokens.push(token);
-            }
-            return count;
+    TokenEncoder.prototype.decodeMulti = function (tokens) {
+        var count = this.streamDataView.getNextUint8();
+        if (!count) {
+            return 0;
         }
-        return 0;
+        var dataType = this.decodeDataType();
+        var multiInfo = {};
+        for (var i = 0; i < count; i++) {
+            var token = this.decodeToken(dataType, multiInfo);
+            tokens.push(token);
+        }
+        return count;
     };
     TokenEncoder.prototype.encodeSingleNumber = function (value, dataType) {
-        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getNumberDataType(value));
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getNumberDataType(value));
         switch (usedDataType) {
-            case DataType.UINT8:
+            case DataType_1.DataType.UINT8:
                 this.streamDataView.setNextUint8(value);
                 break;
-            case DataType.INT8:
+            case DataType_1.DataType.INT8:
                 this.streamDataView.setNextInt8(value);
                 break;
-            case DataType.UINT16:
+            case DataType_1.DataType.UINT16:
                 this.streamDataView.setNextUint16(value);
                 break;
-            case DataType.INT16:
+            case DataType_1.DataType.INT16:
                 this.streamDataView.setNextInt16(value);
                 break;
-            case DataType.UINT32:
+            case DataType_1.DataType.UINT32:
                 this.streamDataView.setNextUint32(value);
                 break;
-            case DataType.INT32:
+            case DataType_1.DataType.INT32:
                 this.streamDataView.setNextInt32(value);
                 break;
-            case DataType.FLOAT32:
+            case DataType_1.DataType.FLOAT32:
                 this.streamDataView.setNextFloat32(value);
                 break;
-            case DataType.FLOAT64:
+            case DataType_1.DataType.FLOAT64:
                 this.streamDataView.setNextFloat64(value);
                 break;
             default:
@@ -3610,82 +3779,35 @@ var TokenEncoder = /** @class */ (function () {
     TokenEncoder.prototype.decodeSingleNumber = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
         switch (usedDataType) {
-            case DataType.UINT8:
+            case DataType_1.DataType.UINT8:
                 return this.streamDataView.getNextUint8();
-            case DataType.INT8:
+            case DataType_1.DataType.INT8:
                 return this.streamDataView.getNextInt8();
-            case DataType.UINT16:
+            case DataType_1.DataType.UINT16:
                 return this.streamDataView.getNextUint16();
-            case DataType.INT16:
+            case DataType_1.DataType.INT16:
                 return this.streamDataView.getNextInt16();
-            case DataType.UINT32:
+            case DataType_1.DataType.UINT32:
                 return this.streamDataView.getNextUint32();
-            case DataType.INT32:
+            case DataType_1.DataType.INT32:
                 return this.streamDataView.getNextInt32();
-            case DataType.FLOAT32:
+            case DataType_1.DataType.FLOAT32:
                 return this.streamDataView.getNextFloat32();
-            case DataType.FLOAT64:
+            case DataType_1.DataType.FLOAT64:
                 return this.streamDataView.getNextFloat64();
             default:
                 throw new Error("Invalid dataType for number: " + usedDataType);
         }
     };
-    TokenEncoder.prototype.numberSatisfyDataType = function (value, dataType) {
-        var hasDecimal = value % 1 !== 0;
-        if (hasDecimal) {
-            switch (dataType) {
-                case DataType.FLOAT32:
-                    return Math.fround(value) === value;
-                case DataType.FLOAT64:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-        switch (dataType) {
-            case DataType.UINT8:
-                return value >= 0 && value <= 255;
-            case DataType.INT8:
-                return value >= -128 && value <= 127;
-            case DataType.UINT16:
-                return value >= 0 && value <= 65535;
-            case DataType.INT16:
-                return value >= -32768 && value <= 32767;
-            case DataType.UINT32:
-                return value >= 0;
-            case DataType.INT32:
-                return true;
-        }
-        return false;
-    };
-    TokenEncoder.prototype.getBestType = function (array) {
-        var _this = this;
-        if (array.some(function (number) { return number % 1 !== 0; })) {
-            //  decimal
-            if (array.every(function (number) { return _this.numberSatisfyDataType(number, DataType.FLOAT32); })) {
-                return DataType.FLOAT32;
-            }
-            return DataType.FLOAT64;
-        }
-        var min = Math.min.apply(Math, array);
-        var max = Math.max.apply(Math, array);
-        for (var _i = 0, NUMBER_DATA_TYPES_1 = NUMBER_DATA_TYPES; _i < NUMBER_DATA_TYPES_1.length; _i++) {
-            var dataType = NUMBER_DATA_TYPES_1[_i];
-            if (this.numberSatisfyDataType(min, dataType) && this.numberSatisfyDataType(max, dataType)) {
-                return dataType;
-            }
-        }
-        return DataType.FLOAT64;
-    };
     TokenEncoder.prototype.encodeNumberArray = function (array, dataType) {
         var pos;
         for (pos = 0; pos < array.length;) {
             var size = Math.min(255, array.length - pos);
-            this.encodeSingleNumber(size, DataType.UINT8);
+            this.encodeSingleNumber(size, DataType_1.DataType.UINT8);
             if (!size) {
                 break;
             }
-            var bestType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getBestType(array));
+            var bestType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getBestType(array));
             for (var i = 0; i < size; i++) {
                 this.encodeSingleNumber(array[pos + i], bestType);
             }
@@ -3693,14 +3815,14 @@ var TokenEncoder = /** @class */ (function () {
         }
         if (pos === 255) {
             //  Reached the max size of 255, but the next one is 0.
-            this.encodeSingleNumber(0, DataType.UINT8);
+            this.encodeSingleNumber(0, DataType_1.DataType.UINT8);
         }
     };
     TokenEncoder.prototype.decodeNumberArray = function (dataType) {
         var size;
         var numbers = [];
         do {
-            size = this.decodeSingleNumber(DataType.UINT8);
+            size = this.decodeSingleNumber(DataType_1.DataType.UINT8);
             if (!size) {
                 break;
             }
@@ -3711,174 +3833,78 @@ var TokenEncoder = /** @class */ (function () {
         } while (size >= 255);
         return numbers;
     };
-    TokenEncoder.prototype.getNumberDataType = function (value) {
-        for (var _i = 0, NUMBER_DATA_TYPES_2 = NUMBER_DATA_TYPES; _i < NUMBER_DATA_TYPES_2.length; _i++) {
-            var type = NUMBER_DATA_TYPES_2[_i];
-            if (this.numberSatisfyDataType(value, type)) {
-                return type;
-            }
-        }
-        return DataType.UNDEFINED;
-    };
-    TokenEncoder.prototype.getStringDataType = function (value) {
-        var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
-        if (letterCodes.every(function (code) { return code <= 255; })) {
-            return DataType.STRING;
-        }
-        else {
-            return DataType.UNICODE;
-        }
-    };
-    TokenEncoder.prototype.getDataType = function (token) {
-        switch (token.type) {
-            case "array":
-            case "object":
-            case "split":
-                var indices = token.value;
-                if (!indices.length) {
-                    console.assert(token.type === "array");
-                    return DataType.EMPTY_ARRAY;
-                }
-                var offset_2 = 0;
-                if (token.type === "array" && indices.length > 3) {
-                    var min = Math.min.apply(Math, indices);
-                    var max = Math.max.apply(Math, indices);
-                    if (this.getNumberDataType(max - min) !== this.getNumberDataType(max)) {
-                        offset_2 = min;
-                    }
-                    indices = indices.map(function (value) { return value - offset_2; });
-                }
-                var bestType = this.getBestType(indices);
-                switch (token.type) {
-                    case "object":
-                        return bestType === DataType.UINT8
-                            ? DataType.OBJECT_8
-                            : bestType === DataType.UINT16
-                                ? DataType.OBJECT_16
-                                : DataType.OBJECT_32;
-                    case "split":
-                        return bestType === DataType.UINT8
-                            ? DataType.SPLIT_8
-                            : bestType === DataType.UINT16
-                                ? DataType.SPLIT_16
-                                : DataType.SPLIT_32;
-                    case "array":
-                        if (offset_2) {
-                            return bestType === DataType.UINT8
-                                ? DataType.OFFSET_ARRAY_8
-                                : bestType === DataType.UINT16
-                                    ? DataType.OFFSET_ARRAY_16
-                                    : DataType.OFFSET_ARRAY_32;
-                        }
-                        else {
-                            return bestType === DataType.UINT8
-                                ? DataType.ARRAY_8
-                                : bestType === DataType.UINT16
-                                    ? DataType.ARRAY_16
-                                    : DataType.ARRAY_32;
-                        }
-                }
-            case "leaf":
-                if (token.value === undefined) {
-                    return DataType.UNDEFINED;
-                }
-                else if (token.value === null) {
-                    return DataType.NULL;
-                }
-                else {
-                    switch (typeof token.value) {
-                        case "boolean":
-                            return token.value ? DataType.BOOLEAN_TRUE : DataType.BOOLEAN_FALSE;
-                        case "string":
-                            return this.getStringDataType(token.value);
-                        case "number":
-                            return this.getNumberDataType(token.value);
-                    }
-                }
-        }
-        throw new Error("Unrecognized type for ".concat(token.type, " value: ").concat(token.value));
-    };
-    TokenEncoder.prototype.dataTypeToType = function (dataType) {
-        switch (dataType) {
-            case DataType.EMPTY_ARRAY:
-            case DataType.ARRAY_8:
-            case DataType.ARRAY_16:
-            case DataType.ARRAY_32:
-                return "array";
-            case DataType.OBJECT_8:
-            case DataType.OBJECT_16:
-            case DataType.OBJECT_32:
-                return "object";
-            case DataType.SPLIT_8:
-            case DataType.SPLIT_16:
-            case DataType.SPLIT_32:
-                return "split";
-            default:
-                return "leaf";
-        }
-    };
-    TokenEncoder.prototype.encodeString = function (value, dataType) {
+    TokenEncoder.prototype.encodeString = function (value, dataType, multiInfo) {
         var _this = this;
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
-        letterCodes.push(0);
-        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.getStringDataType(value));
-        var numberType = usedDataType === DataType.STRING ? DataType.UINT8 : DataType.UINT16;
+        // const min = Math.min(...letterCodes);
+        if (!multiInfo || multiInfo.lastStringLength !== value.length) {
+            letterCodes.push(0);
+        }
+        // console.log(letterCodes, value, (letterCodes).map((value) => !value ? 0 : value - min + 1));
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getStringDataType(value));
+        var numberType = usedDataType === DataType_1.DataType.STRING ? DataType_1.DataType.UINT8 : DataType_1.DataType.UINT16;
         letterCodes.forEach(function (code) { return _this.encodeSingleNumber(code, numberType); });
+        if (multiInfo) {
+            multiInfo.lastStringLength = value.length;
+        }
     };
-    TokenEncoder.prototype.decodeString = function (dataType) {
+    TokenEncoder.prototype.decodeString = function (dataType, multiInfo) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
         var charCodes = [];
-        var numberType = usedDataType === DataType.STRING ? DataType.UINT8 : DataType.UINT16;
+        var numberType = usedDataType === DataType_1.DataType.STRING ? DataType_1.DataType.UINT8 : DataType_1.DataType.UINT16;
         do {
             var code = this.decodeSingleNumber(numberType);
             if (!code) {
                 break;
             }
             charCodes.push(code);
+            if ((multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength) && charCodes.length >= (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength)) {
+                break;
+            }
         } while (true);
-        return charCodes.map(function (code) { return String.fromCharCode(code); }).join("");
+        var string = charCodes.map(function (code) { return String.fromCharCode(code); }).join("");
+        if (multiInfo) {
+            multiInfo.lastStringLength = string.length;
+        }
+        return string;
     };
     TokenEncoder.selfTest = function () {
         var _this = this;
         var testers = [
+            //  0
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction(DataType.STRING, function (dataType) { return tokenEncoder.encodeDataType(dataType); }, reset, function () { return tokenDecoder.decodeDataType(); });
+                _this.testAction(DataType_1.DataType.STRING, function (dataType) { return tokenEncoder.encodeDataType(dataType); }, reset, function () { return tokenDecoder.decodeDataType(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction(DataType.UNDEFINED, function (dataType) { return tokenEncoder.encodeDataType(dataType); }, reset, function () { return tokenDecoder.decodeDataType(); });
+                _this.testAction(DataType_1.DataType.UNDEFINED, function (dataType) { return tokenEncoder.encodeDataType(dataType); }, reset, function () { return tokenDecoder.decodeDataType(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction(33, function (number) { return tokenEncoder.encodeSingleNumber(number, DataType.INT8); }, reset, function () { return tokenDecoder.decodeSingleNumber(DataType.INT8); });
+                _this.testAction(33, function (number) { return tokenEncoder.encodeSingleNumber(number, DataType_1.DataType.INT8); }, reset, function () { return tokenDecoder.decodeSingleNumber(DataType_1.DataType.INT8); });
             },
-            // (tokenEncoder, tokenDecoder, reset) => {
-            //     this.testAction([
-            //             { type: "leaf", value: 123 },
-            //             { type: "leaf", value: 45 },
-            //             { type: "leaf", value: 67 },
-            //             { type: "leaf", value: 89 },
-            //         ],
-            //         header => tokenEncoder.encodeMulti(header, 0),
-            //         reset,
-            //         () => {
-            //             const result: ReducedToken[] = [];
-            //             tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
-            //             return result;
-            //         });
-            // },
-            // (tokenEncoder, tokenDecoder, reset) => {
-            //     this.testAction([
-            //             { type: "leaf", value: 1000001 },
-            //             { type: "leaf", value: 1002000 },
-            //             { type: "leaf", value: 1003001 },
-            //         ],
-            //         header => tokenEncoder.encodeMulti(header, 0),
-            //         reset,
-            //         () => {
-            //             const result: ReducedToken[] = [];
-            //             tokenDecoder.decodeMulti(tokenDecoder.decodeTag(), result);
-            //             return result;
-            //         });                
-            // },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction([
+                    { type: "leaf", value: 123 },
+                    { type: "leaf", value: 45 },
+                    { type: "leaf", value: 67 },
+                    { type: "leaf", value: 89 },
+                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
+                    var result = [];
+                    tokenDecoder.decodeMulti(result);
+                    return result;
+                });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction([
+                    { type: "leaf", value: 1000001 },
+                    { type: "leaf", value: 1002000 },
+                    { type: "leaf", value: 1003001 },
+                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
+                    var result = [];
+                    tokenDecoder.decodeMulti(result);
+                    return result;
+                });
+            },
+            //  5
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction([1, 2, 3, 4, 10, 20, 200], function (array) { return tokenEncoder.encodeNumberArray(array); }, reset, function () { return tokenDecoder.decodeNumberArray(); });
             },
@@ -3889,13 +3915,14 @@ var TokenEncoder = /** @class */ (function () {
                 _this.testAction([10000, -202, 3, 4, 10, 20, 3200], function (array) { return tokenEncoder.encodeNumberArray(array); }, reset, function () { return tokenDecoder.decodeNumberArray(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction("test-string", function (string) { return tokenEncoder.encodeString(string); }, reset, function () { return tokenDecoder.decodeString(); });
+                _this.testAction("teststring", function (string) { return tokenEncoder.encodeString(string); }, reset, function () { return tokenDecoder.decodeString(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction("test-string", function (string) { return tokenEncoder.encodeString(string, DataType.STRING); }, reset, function () { return tokenDecoder.decodeString(DataType.STRING); });
+                _this.testAction("teststring", function (string) { return tokenEncoder.encodeString(string, DataType_1.DataType.STRING); }, reset, function () { return tokenDecoder.decodeString(DataType_1.DataType.STRING); });
             },
+            //  10
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction("test-😀😃😄😁😆", function (string) { return tokenEncoder.encodeString(string); }, reset, function () { return tokenDecoder.decodeString(); });
+                _this.testAction("test😀😃😄😁😆", function (string) { return tokenEncoder.encodeString(string); }, reset, function () { return tokenDecoder.decodeString(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "object", value: [200, 201] }, function (o) { return tokenEncoder.encodeObjectToken(o); }, reset, function () { return tokenDecoder.decodeObjectToken(); });
@@ -3904,19 +3931,20 @@ var TokenEncoder = /** @class */ (function () {
                 _this.testAction({ type: "object", value: [2000, 2001] }, function (o) { return tokenEncoder.encodeObjectToken(o); }, reset, function () { return tokenDecoder.decodeObjectToken(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction({ type: "object", value: [2000, 2001] }, function (o) { return tokenEncoder.encodeObjectToken(o, DataType.OBJECT_32); }, reset, function () { return tokenDecoder.decodeObjectToken(DataType.OBJECT_32); });
+                _this.testAction({ type: "object", value: [2000, 2001] }, function (o) { return tokenEncoder.encodeObjectToken(o, DataType_1.DataType.OBJECT_32); }, reset, function () { return tokenDecoder.decodeObjectToken(DataType_1.DataType.OBJECT_32); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "split", value: [200, 201] }, function (o) { return tokenEncoder.encodeSplitToken(o); }, reset, function () { return tokenDecoder.decodeSplitToken(); });
             },
+            //  15
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "split", value: [2000, 2001] }, function (o) { return tokenEncoder.encodeSplitToken(o); }, reset, function () { return tokenDecoder.decodeSplitToken(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction({ type: "split", value: [2000, 2001] }, function (o) { return tokenEncoder.encodeSplitToken(o, DataType.SPLIT_32); }, reset, function () { return tokenDecoder.decodeSplitToken(DataType.SPLIT_32); });
+                _this.testAction({ type: "split", value: [2000, 2001] }, function (o) { return tokenEncoder.encodeSplitToken(o, DataType_1.DataType.SPLIT_32); }, reset, function () { return tokenDecoder.decodeSplitToken(DataType_1.DataType.SPLIT_32); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
-                _this.testAction({ type: "leaf", value: "token-string" }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
+                _this.testAction({ type: "leaf", value: "tokenstring" }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "leaf", value: 123.5 }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
@@ -3924,6 +3952,7 @@ var TokenEncoder = /** @class */ (function () {
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "leaf", value: "😁😆" }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
+            //  20
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "array", value: [1, 10, 20, 30, 200] }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
@@ -3939,6 +3968,7 @@ var TokenEncoder = /** @class */ (function () {
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "array", value: new Array(260).fill(null).map(function (_, index) { return index; }) }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
+            //  25
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction(new Array(100).fill(null).map(function (_, index) {
                     var token = {
@@ -3988,7 +4018,7 @@ var TokenEncoder = /** @class */ (function () {
 }());
 exports["default"] = TokenEncoder;
 
-},{"stream-data-view":4}],9:[function(require,module,exports){
+},{"./DataType":7,"stream-data-view":4}],10:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -4035,6 +4065,9 @@ var ExtractableData = /** @class */ (function () {
         if (dataTokens) {
             return this.extractor.extract(this.dataStore.headerTokens, dataTokens, __assign(__assign({}, this.config), { allowReferences: allowReferences !== null && allowReferences !== void 0 ? allowReferences : this.config.allowReferences }));
         }
+    };
+    ExtractableData.prototype.getHeaderTokens = function () {
+        return this.dataStore.headerTokens;
     };
     return ExtractableData;
 }());
@@ -4100,7 +4133,7 @@ var Extractor = /** @class */ (function () {
     return Extractor;
 }());
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -4117,7 +4150,7 @@ var exportedClasses = {
 exports["default"] = exportedClasses;
 globalThis.exports = exportedClasses;
 
-},{"./compression/Compressor":6,"./compression/TokenEncoder":8,"./io/Loader":11}],11:[function(require,module,exports){
+},{"./compression/Compressor":6,"./compression/TokenEncoder":9,"./io/Loader":12}],12:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -4188,7 +4221,7 @@ var Loader = /** @class */ (function () {
 }());
 exports["default"] = Loader;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -4202,11 +4235,13 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 exports.__esModule = true;
+var DataType_1 = require("../compression/DataType");
 /**
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
     function Reducer(debug) {
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
         this.debug = debug !== null && debug !== void 0 ? debug : false;
     }
     /**
@@ -4247,15 +4282,76 @@ var Reducer = /** @class */ (function () {
             }
         };
     };
+    /**
+     * Sort tokens by frequency.
+     */
+    Reducer.prototype.sortTokens = function (tokens) {
+        tokens.sort(function (t1, t2) { return t2.count - t1.count; });
+    };
+    /**
+     * Organize tokens in groups of 255
+     * @param tokens
+     */
+    Reducer.prototype.organizeTokens = function (tokens) {
+        var _this = this;
+        if (!tokens.length) {
+            return tokens;
+        }
+        var buckets = [];
+        tokens.forEach(function (token) {
+            var dataType = _this.dataTypeUtils.getFullTokenDataType(token);
+            var bucket = undefined;
+            for (var _i = 0, buckets_1 = buckets; _i < buckets_1.length; _i++) {
+                var b = buckets_1[_i];
+                if (b.length < 255 && _this.dataTypeUtils.getFullTokenDataType(b[0]) === dataType) {
+                    bucket = b;
+                    break;
+                }
+            }
+            if (!bucket) {
+                bucket = [];
+                buckets.push(bucket);
+            }
+            bucket.push(token);
+        });
+        buckets.forEach(function (bucket) {
+            var dataType = _this.dataTypeUtils.getFullTokenDataType(bucket[0]);
+            switch (dataType) {
+                case DataType_1.DataType.UINT8:
+                case DataType_1.DataType.UINT16:
+                case DataType_1.DataType.UINT32:
+                case DataType_1.DataType.INT8:
+                case DataType_1.DataType.INT16:
+                case DataType_1.DataType.INT32:
+                case DataType_1.DataType.FLOAT32:
+                case DataType_1.DataType.FLOAT64:
+                    bucket.sort(function (a, b) { return b.value - a.value; });
+                    break;
+                case DataType_1.DataType.STRING:
+                case DataType_1.DataType.UNICODE:
+                    bucket.sort(function (a, b) { return b.value.length - a.value.length; });
+                    break;
+                case DataType_1.DataType.ARRAY_8:
+                case DataType_1.DataType.ARRAY_16:
+                case DataType_1.DataType.ARRAY_32:
+                    bucket.sort(function (a, b) { return b.value.length - a.value.length; });
+                    break;
+            }
+        });
+        var resultTokens = [];
+        buckets.forEach(function (bucket) { return bucket.forEach(function (token) { return resultTokens.push(token); }); });
+        return resultTokens;
+    };
     Reducer.prototype.createReducedTokens = function (tokens, hashToIndex, offset) {
         var _this = this;
         if (offset === void 0) { offset = 0; }
-        var sortedTokens = tokens.sort(function (t1, t2) { return t2.count - t1.count; });
-        sortedTokens.forEach(function (_a, index) {
+        this.sortTokens(tokens);
+        var organizedTokens = this.organizeTokens(tokens);
+        organizedTokens.forEach(function (_a, index) {
             var hash = _a.hash;
-            hashToIndex[hash] = index + offset;
+            return hashToIndex[hash] = index + offset;
         });
-        return sortedTokens.map(function (token) {
+        return organizedTokens.map(function (token) {
             var _a, _b;
             return (__assign({ type: token.type, value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value }, _this.debug ? { debug: token.value } : {}));
         });
@@ -4264,7 +4360,7 @@ var Reducer = /** @class */ (function () {
 }());
 exports["default"] = Reducer;
 
-},{}],13:[function(require,module,exports){
+},{"../compression/DataType":7}],14:[function(require,module,exports){
 "use strict";
 exports.__esModule = true;
 exports.getType = exports.TEST_REGEX = exports.SPLIT_REGEX = void 0;
@@ -4292,7 +4388,7 @@ function getType(value) {
 }
 exports.getType = getType;
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -4455,4 +4551,4 @@ var Tokenizer = /** @class */ (function () {
 }());
 exports["default"] = Tokenizer;
 
-},{"../io/Loader":11,"./Token":13,"blueimp-md5":1}]},{},[10]);
+},{"../io/Loader":12,"./Token":14,"blueimp-md5":1}]},{},[11]);

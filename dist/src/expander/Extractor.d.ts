@@ -34,6 +34,7 @@ export default class ExtractableData {
      * @returns extracted data.
      */
     extract(filename: string, allowReferences?: boolean): any;
+    getHeaderTokens(): ReducedToken[];
 }
 declare class Extractor {
     valueFetcher: Record<Type, undefined | ((token: ReducedToken, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig) => any)>;

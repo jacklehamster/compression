@@ -7,10 +7,8 @@ export const TEST_REGEX = /(\w\W+|\W+\w)/
 /**
  * Token represent each chunk of data within an object.
  */
-export default interface Token {
-    type: Type;
+export default interface Token extends StoredToken {
     hash: Hash;
-    value: any;
     files: Set<string>;
     order: number;
     count: number;

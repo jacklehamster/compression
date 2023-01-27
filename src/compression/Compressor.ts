@@ -55,7 +55,7 @@ export default class Compressor {
      * 
      * @param files files to load.
      */
-     compress(data: Record<string, any>): ArrayBuffer {
+    compress(data: Record<string, any>): ArrayBuffer {
         const tokenizer = new Tokenizer();
         const header = tokenizer.tokenize(data);
 

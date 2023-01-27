@@ -63,6 +63,10 @@ export default class ExtractableData {
             });
         }
     }
+
+    getHeaderTokens() {
+        return this.dataStore.headerTokens;
+    }
 }
 
 class Extractor {

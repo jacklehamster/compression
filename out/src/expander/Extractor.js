@@ -45,6 +45,9 @@ var ExtractableData = /** @class */ (function () {
             return this.extractor.extract(this.dataStore.headerTokens, dataTokens, __assign(__assign({}, this.config), { allowReferences: allowReferences !== null && allowReferences !== void 0 ? allowReferences : this.config.allowReferences }));
         }
     };
+    ExtractableData.prototype.getHeaderTokens = function () {
+        return this.dataStore.headerTokens;
+    };
     return ExtractableData;
 }());
 exports["default"] = ExtractableData;

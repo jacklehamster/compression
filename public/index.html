@@ -75,6 +75,7 @@
         const extractable = compressor.expand(compressedBuffer, {allowReferences: true});
         console.log("Time to expand header: %s", performance.now() - time);
         console.log("Files:", extractable.fileNames);
+        console.log("Header", extractable.getHeaderTokens());
 
         files.forEach((file, index) => {
           time = performance.now();
@@ -90,17 +91,18 @@
         const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json", false);
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
 
-        try {
-         const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
-         const turtleData = eTest.extract("games/turtle/turtle.json", true);
-         console.log("Version", eTest.version);
-         console.log("Files stored:", eTest.fileNames);
-         console.log("Turtle data", turtleData);
-         console.log("Original data size", eTest.originalDataSize);
-         console.log("Compressed size", eTest.compressedSize);
-        } catch (e) {
-          console.error(e.message);
-        }
+        // try {
+        //  const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
+        //  const turtleData = eTest.extract("games/turtle/turtle.json", true);
+        //  console.log("Version", eTest.version);
+        //  console.log("Number of files stored:", eTest.fileNames.length);
+        //  console.log("Turtle data", turtleData);
+        //  console.log("Original data size", eTest.originalDataSize);
+        //  console.log("Compressed size", eTest.compressedSize);
+        //  console.log(eTest.getHeaderTokens());
+        // } catch (e) {
+        //   console.error(e.message);
+        // }
       });
     </script>
 

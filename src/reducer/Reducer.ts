@@ -1,5 +1,6 @@
-import Token, { Hash, ReducedToken } from "../tokenizer/Token";
+import Token, { Hash, ReducedToken, StoredToken } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
+import { DataType, DataTypeUtils } from "../compression/DataType";
 
 /**
  * Stores all information needed to extract data.
@@ -22,6 +23,7 @@ export interface DataStore {
  */
 export default class Reducer {
     debug: boolean;
+    dataTypeUtils: DataTypeUtils = new DataTypeUtils();
 
     constructor(debug?: boolean) {
         this.debug = debug ?? false;
@@ -62,14 +64,74 @@ export default class Reducer {
         };
     }
 
-    private createReducedTokens(tokens: Token[], hashToIndex : Record<Hash, number>, offset: number = 0) {
-        const sortedTokens = tokens.sort((t1, t2) => t2.count - t1.count);
+    /**
+     * Sort tokens by frequency.
+     */
+    private sortTokens(tokens: Token[]): void {
+        tokens.sort((t1, t2) => t2.count - t1.count);
+    }
 
-        sortedTokens.forEach(({hash}, index) => {
-            hashToIndex[hash] = index + offset;
+    /**
+     * Organize tokens in groups of 255
+     * @param tokens 
+     */
+    private organizeTokens(tokens: Token[]): Token[] {
+        if (!tokens.length) {
+            return tokens;
+        }
+        const buckets: Token[][] = [];
+        tokens.forEach(token => {
+            const dataType = this.dataTypeUtils.getFullTokenDataType(token);
+            let bucket: Token[] | undefined = undefined;
+            for (let b of buckets) {
+                if (b.length < 255 && this.dataTypeUtils.getFullTokenDataType(b[0]) === dataType) {
+                    bucket = b;
+                    break;
+                }
+            }
+            if (!bucket) {
+                bucket = [];
+                buckets.push(bucket);
+            }
+            bucket.push(token);
         });
 
-        return sortedTokens.map(token => ({
+        buckets.forEach(bucket => {
+            const dataType = this.dataTypeUtils.getFullTokenDataType(bucket[0]);
+            switch (dataType) {
+                case DataType.UINT8:
+                case DataType.UINT16:
+                case DataType.UINT32:
+                case DataType.INT8:
+                case DataType.INT16:
+                case DataType.INT32:
+                case DataType.FLOAT32:
+                case DataType.FLOAT64:
+                    bucket.sort((a, b) => b.value - a.value);
+                    break;
+                case DataType.STRING:
+                case DataType.UNICODE:
+                    bucket.sort((a, b) => b.value.length - a.value.length);
+                    break;
+                case DataType.ARRAY_8:
+                case DataType.ARRAY_16:
+                case DataType.ARRAY_32:
+                    bucket.sort((a, b) => b.value.length - a.value.length)
+                    break;
+            }
+        });
+        const resultTokens: Token[] = [];
+        buckets.forEach(bucket => bucket.forEach(token => resultTokens.push(token)));
+        return resultTokens;
+    }
+
+    private createReducedTokens(tokens: Token[], hashToIndex : Record<Hash, number>, offset: number = 0) {
+        this.sortTokens(tokens);
+        const organizedTokens = this.organizeTokens(tokens);
+
+        organizedTokens.forEach(({hash}, index) => hashToIndex[hash] = index + offset);
+
+        return organizedTokens.map(token => ({
             type: token.type,
             value: token.reference?.map(hash => hashToIndex[hash]) ?? token.value,
             ...this.debug ? { debug: token.value } : {},
