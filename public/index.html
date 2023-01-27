@@ -75,7 +75,6 @@
         const extractable = compressor.expand(compressedBuffer, {allowReferences: true});
         console.log("Time to expand header: %s", performance.now() - time);
         console.log("Files:", extractable.fileNames);
-        console.log("Header", extractable.getHeaderTokens());
 
         files.forEach((file, index) => {
           time = performance.now();
