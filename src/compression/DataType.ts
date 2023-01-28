@@ -27,7 +27,9 @@ export enum DataType {
     OFFSET_ARRAY_8 = 26,
     OFFSET_ARRAY_16 = 27,
     OFFSET_ARRAY_32 = 28,
-    EMPTY_ARRAY = 29
+    EMPTY_ARRAY = 29,
+    REFERENCE = 30,
+    COMPLEX_OBJECT = 31,
 }
 
 export const NUMBER_DATA_TYPES = [
@@ -185,9 +187,11 @@ export class DataTypeUtils {
                             return this.getStringDataType(token.value);
                         case "number":
                             return this.getNumberDataType(token.value);
-
                     }    
                 }
+                break;
+            case "reference":
+                return DataType.REFERENCE;
         }
         throw new Error(`Unrecognized type for ${token.type} value: ${token.value}`);
     }
@@ -207,6 +211,8 @@ export class DataTypeUtils {
             case DataType.SPLIT_16:
             case DataType.SPLIT_32:
                 return "split";
+            case DataType.REFERENCE:
+                return "reference";
             default:
                 return "leaf";
         }

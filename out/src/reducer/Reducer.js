@@ -53,9 +53,7 @@ var Reducer = /** @class */ (function () {
             originalDataSize: header.originalDataSize,
             headerTokens: headerTokens,
             files: files,
-            getDataTokens: function (index) {
-                return dataTokens[index];
-            }
+            getDataTokens: function (index) { return dataTokens[index]; }
         };
     };
     /**
@@ -131,6 +129,40 @@ var Reducer = /** @class */ (function () {
             var _a, _b;
             return (__assign({ type: token.type, value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value }, _this.debug ? { debug: token.value } : {}));
         });
+    };
+    /**
+     *  Traverse object to produce a set of tokens used to produce a complex object
+     * @param token Root token
+     * @param hashToIndex Hash to index mapping
+     * @param result Resulting set of tokens
+     */
+    Reducer.prototype.createComplexObject = function (token, hashToIndex, registry, result) {
+        var _this = this;
+        var _a;
+        if (hashToIndex[token.hash] >= 0) {
+            result.push({ type: "reference", value: hashToIndex[token.hash] });
+        }
+        else if (token.type === "leaf") {
+            if (token.count > 1) {
+                var index = result.length;
+                hashToIndex[token.hash] = index;
+            }
+            result.push({ type: token.type, value: token.value });
+        }
+        else if (token.type === "split" || token.type === "object" || token.type === "array") {
+            if (token.count > 1) {
+                var index = result.length;
+                hashToIndex[token.hash] = index;
+            }
+            result.push({ type: token.type, value: undefined });
+            var subTokens = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return registry[hash]; });
+            subTokens === null || subTokens === void 0 ? void 0 : subTokens.forEach(function (token) {
+                _this.createComplexObject(token, hashToIndex, registry, result);
+            });
+        }
+        else {
+            throw new Error("Invalid token type");
+        }
     };
     return Reducer;
 }());

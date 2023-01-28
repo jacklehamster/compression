@@ -1,4 +1,4 @@
-export declare type Type = "leaf" | "array" | "object" | "split";
+export declare type Type = "leaf" | "array" | "object" | "split" | "reference";
 export declare type Hash = string;
 export declare const SPLIT_REGEX: RegExp;
 export declare const TEST_REGEX: RegExp;

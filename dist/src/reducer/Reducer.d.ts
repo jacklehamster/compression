@@ -1,4 +1,4 @@
-import { ReducedToken } from "../tokenizer/Token";
+import Token, { Hash, ReducedToken } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
 import { DataTypeUtils } from "../compression/DataType";
 /**
@@ -40,4 +40,11 @@ export default class Reducer {
      */
     private organizeTokens;
     private createReducedTokens;
+    /**
+     *  Traverse object to produce a set of tokens used to produce a complex object
+     * @param token Root token
+     * @param hashToIndex Hash to index mapping
+     * @param result Resulting set of tokens
+     */
+    createComplexObject(token: Token, hashToIndex: Record<Hash, number>, registry: Record<Hash, Token>, result: ReducedToken[]): void;
 }

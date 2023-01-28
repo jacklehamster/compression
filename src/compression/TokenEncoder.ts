@@ -3,11 +3,6 @@ import { StreamDataView } from "stream-data-view";
 import { ReducedToken } from "../tokenizer/Token";
 import { DataType, DataTypeUtils } from "./DataType";
 
-enum Tag {
-    DONE = 100,
-    MULTI = 101,
-};
-
 type Tester = (encoder: TokenEncoder, decoder: TokenEncoder, reset: () => void) => void;
 
 interface MultiInfo {
@@ -207,19 +202,6 @@ export default class TokenEncoder {
             type: "split",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)],
         };
-    }
-
-    encodeTag(tag: Tag) {
-        this.streamDataView.setNextUint8(tag);
-    }
-
-    decodeTag(): Tag {
-        return this.streamDataView.getNextUint8();
-    }
-
-    decodeTagOrDataType(): Tag | DataType {
-        const dataType = this.streamDataView.getNextUint8();
-        return dataType;
     }
 
     encodeDataType(dataType: DataType): DataType {

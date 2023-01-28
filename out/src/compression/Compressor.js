@@ -56,6 +56,7 @@ var ENCODERS = [
     function () { return undefined; },
     function () { return new FFlateEncoder_1["default"](); },
 ];
+var DEFAULT = [EncoderEnum.FFLATE];
 var Compressor = /** @class */ (function () {
     function Compressor() {
     }
@@ -130,7 +131,7 @@ var Compressor = /** @class */ (function () {
     };
     Compressor.prototype.compressDataStore = function (dataStore, encoderEnums) {
         var _a;
-        if (encoderEnums === void 0) { encoderEnums = [EncoderEnum.FFLATE]; }
+        if (encoderEnums === void 0) { encoderEnums = DEFAULT; }
         var streamDataView = new stream_data_view_1.StreamDataView();
         var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
         //  Write header tokens
@@ -151,6 +152,7 @@ var Compressor = /** @class */ (function () {
         var headerBuffer = this.applyEncoders(streamDataView.getBuffer(), encoders);
         finalStream.setNextUint32(headerBuffer.byteLength);
         finalStream.setNextBytes(headerBuffer);
+        console.log("HEADER length", headerBuffer.byteLength);
         //  Write each file's data tokens.
         for (var index = 0; index < dataStore.files.length; index++) {
             var subStream = new stream_data_view_1.StreamDataView();
@@ -159,6 +161,7 @@ var Compressor = /** @class */ (function () {
             //  save and compress buffer
             var subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
             finalStream.setNextUint32(subBuffer.byteLength);
+            console.log("SUBBUFFER length", index, subBuffer.byteLength);
             finalStream.setNextBytes(subBuffer);
         }
         finalStream.setNextUint32(0);
@@ -194,7 +197,7 @@ var Compressor = /** @class */ (function () {
             if (!byteLength) {
                 break;
             }
-            subBuffers.push(globalStream.getNextBytes(byteLength));
+            subBuffers.push(globalStream.getNextBytes(byteLength).buffer);
         } while (globalStream.getOffset() < globalStream.getLength());
         var getDataTokens = function (index) {
             var subBuffer = _this.applyDecoders(subBuffers[index], decoders);

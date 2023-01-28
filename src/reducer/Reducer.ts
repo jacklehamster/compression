@@ -58,9 +58,7 @@ export default class Reducer {
             originalDataSize: header.originalDataSize,
             headerTokens,
             files,
-            getDataTokens(index: number) {
-                return dataTokens[index];
-            },
+            getDataTokens: (index: number) => dataTokens[index],
         };
     }
 
@@ -136,5 +134,35 @@ export default class Reducer {
             value: token.reference?.map(hash => hashToIndex[hash]) ?? token.value,
             ...this.debug ? { debug: token.value } : {},
         }));
+    }
+
+    /**
+     *  Traverse object to produce a set of tokens used to produce a complex object
+     * @param token Root token
+     * @param hashToIndex Hash to index mapping
+     * @param result Resulting set of tokens
+     */
+    createComplexObject(token: Token, hashToIndex: Record<Hash, number>, registry: Record<Hash, Token>, result: ReducedToken[]): void {
+        if (hashToIndex[token.hash] >= 0) {
+            result.push({ type: "reference", value: hashToIndex[token.hash] });
+        } else if (token.type === "leaf") {
+            if (token.count > 1) {
+                const index = result.length;
+                hashToIndex[token.hash] = index;
+            }
+            result.push({ type: token.type, value: token.value });
+        } else if (token.type === "split" || token.type === "object" || token.type === "array") {
+            if (token.count > 1) {
+                const index = result.length;
+                hashToIndex[token.hash] = index;
+            }
+            result.push({ type: token.type, value: undefined });
+            const subTokens = token.reference?.map((hash) => registry[hash]);
+            subTokens?.forEach(token => {
+                this.createComplexObject(token, hashToIndex, registry, result);
+            });
+        } else {
+            throw new Error("Invalid token type");
+        }
     }
 }

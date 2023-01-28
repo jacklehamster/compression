@@ -78,6 +78,7 @@ class Extractor {
             "leaf": undefined,
             "object": this.getObject.bind(this),
             "split": this.getSplit.bind(this),
+            "reference": this.getReference.bind(this),
         };
     }
 
@@ -106,6 +107,11 @@ class Extractor {
                 forceAllowUseCache || config.allowReferences,
                 this.valueFetcher[token.type]
             );
+    }
+
+    private getReference(token: ReducedToken, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig): any {
+        const index = token.value;
+        return this.extractToken(index, headerTokens, dataTokens, config);
     }
 
     private getArray(token: ReducedToken, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig): any[] {

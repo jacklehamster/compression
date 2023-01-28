@@ -30,6 +30,8 @@ var DataType;
     DataType[DataType["OFFSET_ARRAY_16"] = 27] = "OFFSET_ARRAY_16";
     DataType[DataType["OFFSET_ARRAY_32"] = 28] = "OFFSET_ARRAY_32";
     DataType[DataType["EMPTY_ARRAY"] = 29] = "EMPTY_ARRAY";
+    DataType[DataType["REFERENCE"] = 30] = "REFERENCE";
+    DataType[DataType["COMPLEX_OBJECT"] = 31] = "COMPLEX_OBJECT";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -187,6 +189,9 @@ var DataTypeUtils = /** @class */ (function () {
                             return this.getNumberDataType(token.value);
                     }
                 }
+                break;
+            case "reference":
+                return DataType.REFERENCE;
         }
         throw new Error("Unrecognized type for ".concat(token.type, " value: ").concat(token.value));
     };
@@ -205,6 +210,8 @@ var DataTypeUtils = /** @class */ (function () {
             case DataType.SPLIT_16:
             case DataType.SPLIT_32:
                 return "split";
+            case DataType.REFERENCE:
+                return "reference";
             default:
                 return "leaf";
         }

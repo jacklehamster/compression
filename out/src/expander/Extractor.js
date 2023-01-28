@@ -57,7 +57,8 @@ var Extractor = /** @class */ (function () {
             "array": this.getArray.bind(this),
             "leaf": undefined,
             "object": this.getObject.bind(this),
-            "split": this.getSplit.bind(this)
+            "split": this.getSplit.bind(this),
+            "reference": this.getReference.bind(this)
         };
     }
     Extractor.prototype.extractFileNames = function (files, headerTokens, config) {
@@ -76,6 +77,10 @@ var Extractor = /** @class */ (function () {
             return token.value;
         }
         return this.extractValueOrCache(token, headerTokens, dataTokens, config, forceAllowUseCache || config.allowReferences, this.valueFetcher[token.type]);
+    };
+    Extractor.prototype.getReference = function (token, headerTokens, dataTokens, config) {
+        var index = token.value;
+        return this.extractToken(index, headerTokens, dataTokens, config);
     };
     Extractor.prototype.getArray = function (token, headerTokens, dataTokens, config) {
         var _this = this;

@@ -1,10 +1,6 @@
 import { StreamDataView } from "stream-data-view";
 import { ReducedToken } from "../tokenizer/Token";
 import { DataType, DataTypeUtils } from "./DataType";
-declare enum Tag {
-    DONE = 100,
-    MULTI = 101
-}
 interface MultiInfo {
     lastStringLength?: number;
 }
@@ -23,9 +19,6 @@ export default class TokenEncoder {
     decodeObjectToken(dataType?: DataType): ReducedToken;
     encodeSplitToken(splitToken: ReducedToken, dataType?: DataType): void;
     decodeSplitToken(dataType?: DataType): ReducedToken;
-    encodeTag(tag: Tag): void;
-    decodeTag(): Tag;
-    decodeTagOrDataType(): Tag | DataType;
     encodeDataType(dataType: DataType): DataType;
     decodeDataType(): DataType;
     encodeMulti(tokens: ReducedToken[], pos: number): number;

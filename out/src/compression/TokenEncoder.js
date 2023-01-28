@@ -3,12 +3,6 @@ exports.__esModule = true;
 //18033
 var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
-var Tag;
-(function (Tag) {
-    Tag[Tag["DONE"] = 100] = "DONE";
-    Tag[Tag["MULTI"] = 101] = "MULTI";
-})(Tag || (Tag = {}));
-;
 var TokenEncoder = /** @class */ (function () {
     function TokenEncoder(streamDataView) {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
@@ -185,16 +179,6 @@ var TokenEncoder = /** @class */ (function () {
             type: "split",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)]
         };
-    };
-    TokenEncoder.prototype.encodeTag = function (tag) {
-        this.streamDataView.setNextUint8(tag);
-    };
-    TokenEncoder.prototype.decodeTag = function () {
-        return this.streamDataView.getNextUint8();
-    };
-    TokenEncoder.prototype.decodeTagOrDataType = function () {
-        var dataType = this.streamDataView.getNextUint8();
-        return dataType;
     };
     TokenEncoder.prototype.encodeDataType = function (dataType) {
         this.streamDataView.setNextUint8(dataType);

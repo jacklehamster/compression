@@ -42,6 +42,7 @@ declare class Extractor {
     extractFileNames(files: number[], headerTokens: ReducedToken[], config: ExtractionConfig): any[];
     extract(headerTokens: ReducedToken[], dataTokens: ReducedToken[], config: ExtractionConfig): any;
     private extractToken;
+    private getReference;
     private getArray;
     private getObject;
     private getSplit;

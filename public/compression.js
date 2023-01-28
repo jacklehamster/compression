@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3082,6 +3082,7 @@ var ENCODERS = [
     function () { return undefined; },
     function () { return new FFlateEncoder_1["default"](); },
 ];
+var DEFAULT = [EncoderEnum.FFLATE];
 var Compressor = /** @class */ (function () {
     function Compressor() {
     }
@@ -3156,7 +3157,7 @@ var Compressor = /** @class */ (function () {
     };
     Compressor.prototype.compressDataStore = function (dataStore, encoderEnums) {
         var _a;
-        if (encoderEnums === void 0) { encoderEnums = [EncoderEnum.FFLATE]; }
+        if (encoderEnums === void 0) { encoderEnums = DEFAULT; }
         var streamDataView = new stream_data_view_1.StreamDataView();
         var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
         //  Write header tokens
@@ -3177,6 +3178,7 @@ var Compressor = /** @class */ (function () {
         var headerBuffer = this.applyEncoders(streamDataView.getBuffer(), encoders);
         finalStream.setNextUint32(headerBuffer.byteLength);
         finalStream.setNextBytes(headerBuffer);
+        console.log("HEADER length", headerBuffer.byteLength);
         //  Write each file's data tokens.
         for (var index = 0; index < dataStore.files.length; index++) {
             var subStream = new stream_data_view_1.StreamDataView();
@@ -3185,6 +3187,7 @@ var Compressor = /** @class */ (function () {
             //  save and compress buffer
             var subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
             finalStream.setNextUint32(subBuffer.byteLength);
+            console.log("SUBBUFFER length", index, subBuffer.byteLength);
             finalStream.setNextBytes(subBuffer);
         }
         finalStream.setNextUint32(0);
@@ -3220,7 +3223,7 @@ var Compressor = /** @class */ (function () {
             if (!byteLength) {
                 break;
             }
-            subBuffers.push(globalStream.getNextBytes(byteLength));
+            subBuffers.push(globalStream.getNextBytes(byteLength).buffer);
         } while (globalStream.getOffset() < globalStream.getLength());
         var getDataTokens = function (index) {
             var subBuffer = _this.applyDecoders(subBuffers[index], decoders);
@@ -3281,6 +3284,8 @@ var DataType;
     DataType[DataType["OFFSET_ARRAY_16"] = 27] = "OFFSET_ARRAY_16";
     DataType[DataType["OFFSET_ARRAY_32"] = 28] = "OFFSET_ARRAY_32";
     DataType[DataType["EMPTY_ARRAY"] = 29] = "EMPTY_ARRAY";
+    DataType[DataType["REFERENCE"] = 30] = "REFERENCE";
+    DataType[DataType["COMPLEX_OBJECT"] = 31] = "COMPLEX_OBJECT";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -3438,6 +3443,9 @@ var DataTypeUtils = /** @class */ (function () {
                             return this.getNumberDataType(token.value);
                     }
                 }
+                break;
+            case "reference":
+                return DataType.REFERENCE;
         }
         throw new Error("Unrecognized type for ".concat(token.type, " value: ").concat(token.value));
     };
@@ -3456,6 +3464,8 @@ var DataTypeUtils = /** @class */ (function () {
             case DataType.SPLIT_16:
             case DataType.SPLIT_32:
                 return "split";
+            case DataType.REFERENCE:
+                return "reference";
             default:
                 return "leaf";
         }
@@ -3510,12 +3520,6 @@ exports.__esModule = true;
 //18033
 var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
-var Tag;
-(function (Tag) {
-    Tag[Tag["DONE"] = 100] = "DONE";
-    Tag[Tag["MULTI"] = 101] = "MULTI";
-})(Tag || (Tag = {}));
-;
 var TokenEncoder = /** @class */ (function () {
     function TokenEncoder(streamDataView) {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
@@ -3692,16 +3696,6 @@ var TokenEncoder = /** @class */ (function () {
             type: "split",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)]
         };
-    };
-    TokenEncoder.prototype.encodeTag = function (tag) {
-        this.streamDataView.setNextUint8(tag);
-    };
-    TokenEncoder.prototype.decodeTag = function () {
-        return this.streamDataView.getNextUint8();
-    };
-    TokenEncoder.prototype.decodeTagOrDataType = function () {
-        var dataType = this.streamDataView.getNextUint8();
-        return dataType;
     };
     TokenEncoder.prototype.encodeDataType = function (dataType) {
         this.streamDataView.setNextUint8(dataType);
@@ -4078,7 +4072,8 @@ var Extractor = /** @class */ (function () {
             "array": this.getArray.bind(this),
             "leaf": undefined,
             "object": this.getObject.bind(this),
-            "split": this.getSplit.bind(this)
+            "split": this.getSplit.bind(this),
+            "reference": this.getReference.bind(this)
         };
     }
     Extractor.prototype.extractFileNames = function (files, headerTokens, config) {
@@ -4097,6 +4092,10 @@ var Extractor = /** @class */ (function () {
             return token.value;
         }
         return this.extractValueOrCache(token, headerTokens, dataTokens, config, forceAllowUseCache || config.allowReferences, this.valueFetcher[token.type]);
+    };
+    Extractor.prototype.getReference = function (token, headerTokens, dataTokens, config) {
+        var index = token.value;
+        return this.extractToken(index, headerTokens, dataTokens, config);
     };
     Extractor.prototype.getArray = function (token, headerTokens, dataTokens, config) {
         var _this = this;
@@ -4277,9 +4276,7 @@ var Reducer = /** @class */ (function () {
             originalDataSize: header.originalDataSize,
             headerTokens: headerTokens,
             files: files,
-            getDataTokens: function (index) {
-                return dataTokens[index];
-            }
+            getDataTokens: function (index) { return dataTokens[index]; }
         };
     };
     /**
@@ -4355,6 +4352,40 @@ var Reducer = /** @class */ (function () {
             var _a, _b;
             return (__assign({ type: token.type, value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value }, _this.debug ? { debug: token.value } : {}));
         });
+    };
+    /**
+     *  Traverse object to produce a set of tokens used to produce a complex object
+     * @param token Root token
+     * @param hashToIndex Hash to index mapping
+     * @param result Resulting set of tokens
+     */
+    Reducer.prototype.createComplexObject = function (token, hashToIndex, registry, result) {
+        var _this = this;
+        var _a;
+        if (hashToIndex[token.hash] >= 0) {
+            result.push({ type: "reference", value: hashToIndex[token.hash] });
+        }
+        else if (token.type === "leaf") {
+            if (token.count > 1) {
+                var index = result.length;
+                hashToIndex[token.hash] = index;
+            }
+            result.push({ type: token.type, value: token.value });
+        }
+        else if (token.type === "split" || token.type === "object" || token.type === "array") {
+            if (token.count > 1) {
+                var index = result.length;
+                hashToIndex[token.hash] = index;
+            }
+            result.push({ type: token.type, value: undefined });
+            var subTokens = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return registry[hash]; });
+            subTokens === null || subTokens === void 0 ? void 0 : subTokens.forEach(function (token) {
+                _this.createComplexObject(token, hashToIndex, registry, result);
+            });
+        }
+        else {
+            throw new Error("Invalid token type");
+        }
     };
     return Reducer;
 }());

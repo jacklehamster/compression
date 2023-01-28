@@ -17,6 +17,8 @@ const ENCODERS: (() => Encoder | undefined)[] = [
     () => new FFlateEncoder(),
 ]
 
+const DEFAULT: EncoderEnum[] = [EncoderEnum.FFLATE];
+
 export default class Compressor {
     private applyEncoders(buffer: ArrayBuffer, encoders: Encoder[]): ArrayBuffer {
         let resultBuffer = buffer;
@@ -74,7 +76,7 @@ export default class Compressor {
         return new ExtractableData(this.expandDataStore(arrayBuffer), config);
     }
 
-    compressDataStore(dataStore: DataStore, encoderEnums: EncoderEnum[] = [EncoderEnum.FFLATE]): ArrayBuffer {
+    compressDataStore(dataStore: DataStore, encoderEnums: EncoderEnum[] = DEFAULT): ArrayBuffer {
         const streamDataView = new StreamDataView();
         const tokenEncoder: TokenEncoder = new TokenEncoder(streamDataView);
 
@@ -100,6 +102,7 @@ export default class Compressor {
         const headerBuffer = this.applyEncoders(streamDataView.getBuffer(), encoders);
         finalStream.setNextUint32(headerBuffer.byteLength);
         finalStream.setNextBytes(headerBuffer);
+        console.log("HEADER length", headerBuffer.byteLength);
 
         //  Write each file's data tokens.
         for (let index = 0; index < dataStore.files.length; index++) {
@@ -110,6 +113,7 @@ export default class Compressor {
             //  save and compress buffer
             const subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
             finalStream.setNextUint32(subBuffer.byteLength);
+            console.log("SUBBUFFER length", index, subBuffer.byteLength);
             finalStream.setNextBytes(subBuffer);
         }
         finalStream.setNextUint32(0);
@@ -150,7 +154,7 @@ export default class Compressor {
             if (!byteLength) {
                 break;
             }
-            subBuffers.push(globalStream.getNextBytes(byteLength));
+            subBuffers.push(globalStream.getNextBytes(byteLength).buffer);
         } while(globalStream.getOffset() < globalStream.getLength())
 
         const getDataTokens = (index: number) => {
