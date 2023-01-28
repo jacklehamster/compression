@@ -27,8 +27,10 @@ export declare enum DataType {
     OFFSET_ARRAY_16 = 27,
     OFFSET_ARRAY_32 = 28,
     EMPTY_ARRAY = 29,
-    REFERENCE = 30,
-    COMPLEX_OBJECT = 31
+    REFERENCE_8 = 30,
+    REFERENCE_16 = 31,
+    REFERENCE_32 = 32,
+    COMPLEX_OBJECT = 33
 }
 export declare const NUMBER_DATA_TYPES: DataType[];
 export declare class DataTypeUtils {

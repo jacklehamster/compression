@@ -19,6 +19,8 @@ export default class TokenEncoder {
     decodeObjectToken(dataType?: DataType): ReducedToken;
     encodeSplitToken(splitToken: ReducedToken, dataType?: DataType): void;
     decodeSplitToken(dataType?: DataType): ReducedToken;
+    encodeReferenceToken(token: ReducedToken, dataType?: DataType): void;
+    decodeReferenceToken(dataType?: DataType): ReducedToken;
     encodeDataType(dataType: DataType): DataType;
     decodeDataType(): DataType;
     encodeMulti(tokens: ReducedToken[], pos: number): number;

@@ -79,6 +79,11 @@ export default class TokenEncoder {
             case DataType.OFFSET_ARRAY_32:
                 this.encodeArrayToken(token, usedDataType);
                 break;
+            case DataType.REFERENCE_8:
+            case DataType.REFERENCE_16:
+            case DataType.REFERENCE_32:
+                this.encodeReferenceToken(token, usedDataType);
+                break;
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
             }
@@ -201,6 +206,22 @@ export default class TokenEncoder {
         return {
             type: "split",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)],
+        };
+    }
+
+    encodeReferenceToken(token: ReducedToken, dataType?: DataType) {
+        const usedDataType = dataType ?? this.encodeDataType(this.dataTypeUtils.getDataType(token));
+        const numberType = usedDataType === DataType.REFERENCE_8 ? DataType.UINT8 : usedDataType === DataType.REFERENCE_16 ? DataType.UINT16 : DataType.UINT32;
+        const index = token.value;
+        this.encodeSingleNumber(index, numberType);
+    }
+
+    decodeReferenceToken(dataType?: DataType): ReducedToken {
+        const usedDataType = dataType ?? this.decodeDataType();
+        const numberType = usedDataType === DataType.REFERENCE_8 ? DataType.UINT8 : usedDataType === DataType.REFERENCE_16 ? DataType.UINT16 : DataType.UINT32;
+        return {
+            type: "reference",
+            value: this.decodeSingleNumber(numberType),
         };
     }
 

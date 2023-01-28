@@ -28,8 +28,10 @@ export enum DataType {
     OFFSET_ARRAY_16 = 27,
     OFFSET_ARRAY_32 = 28,
     EMPTY_ARRAY = 29,
-    REFERENCE = 30,
-    COMPLEX_OBJECT = 31,
+    REFERENCE_8 = 30,
+    REFERENCE_16 = 31,
+    REFERENCE_32 = 32,
+    COMPLEX_OBJECT = 33,
 }
 
 export const NUMBER_DATA_TYPES = [
@@ -191,7 +193,15 @@ export class DataTypeUtils {
                 }
                 break;
             case "reference":
-                return DataType.REFERENCE;
+                switch(this.getNumberDataType(token.value)) {
+                    case DataType.UINT8:
+                        return DataType.REFERENCE_8;
+                    case DataType.UINT16:
+                        return DataType.REFERENCE_16;
+                    case DataType.UINT32:
+                        return DataType.REFERENCE_32;
+                }
+                throw new Error("Invalid reference value: " + token.value);
         }
         throw new Error(`Unrecognized type for ${token.type} value: ${token.value}`);
     }
@@ -211,7 +221,9 @@ export class DataTypeUtils {
             case DataType.SPLIT_16:
             case DataType.SPLIT_32:
                 return "split";
-            case DataType.REFERENCE:
+            case DataType.REFERENCE_8:
+            case DataType.REFERENCE_16:
+            case DataType.REFERENCE_32:
                 return "reference";
             default:
                 return "leaf";

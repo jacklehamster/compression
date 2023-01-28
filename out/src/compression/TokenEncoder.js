@@ -68,6 +68,11 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.OFFSET_ARRAY_32:
                 this.encodeArrayToken(token, usedDataType);
                 break;
+            case DataType_1.DataType.REFERENCE_8:
+            case DataType_1.DataType.REFERENCE_16:
+            case DataType_1.DataType.REFERENCE_32:
+                this.encodeReferenceToken(token, usedDataType);
+                break;
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
@@ -178,6 +183,20 @@ var TokenEncoder = /** @class */ (function () {
         return {
             type: "split",
             value: [this.decodeSingleNumber(numberType), this.decodeSingleNumber(numberType)]
+        };
+    };
+    TokenEncoder.prototype.encodeReferenceToken = function (token, dataType) {
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getDataType(token));
+        var numberType = usedDataType === DataType_1.DataType.REFERENCE_8 ? DataType_1.DataType.UINT8 : usedDataType === DataType_1.DataType.REFERENCE_16 ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
+        var index = token.value;
+        this.encodeSingleNumber(index, numberType);
+    };
+    TokenEncoder.prototype.decodeReferenceToken = function (dataType) {
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
+        var numberType = usedDataType === DataType_1.DataType.REFERENCE_8 ? DataType_1.DataType.UINT8 : usedDataType === DataType_1.DataType.REFERENCE_16 ? DataType_1.DataType.UINT16 : DataType_1.DataType.UINT32;
+        return {
+            type: "reference",
+            value: this.decodeSingleNumber(numberType)
         };
     };
     TokenEncoder.prototype.encodeDataType = function (dataType) {

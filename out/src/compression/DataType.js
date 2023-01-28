@@ -30,8 +30,10 @@ var DataType;
     DataType[DataType["OFFSET_ARRAY_16"] = 27] = "OFFSET_ARRAY_16";
     DataType[DataType["OFFSET_ARRAY_32"] = 28] = "OFFSET_ARRAY_32";
     DataType[DataType["EMPTY_ARRAY"] = 29] = "EMPTY_ARRAY";
-    DataType[DataType["REFERENCE"] = 30] = "REFERENCE";
-    DataType[DataType["COMPLEX_OBJECT"] = 31] = "COMPLEX_OBJECT";
+    DataType[DataType["REFERENCE_8"] = 30] = "REFERENCE_8";
+    DataType[DataType["REFERENCE_16"] = 31] = "REFERENCE_16";
+    DataType[DataType["REFERENCE_32"] = 32] = "REFERENCE_32";
+    DataType[DataType["COMPLEX_OBJECT"] = 33] = "COMPLEX_OBJECT";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -191,7 +193,15 @@ var DataTypeUtils = /** @class */ (function () {
                 }
                 break;
             case "reference":
-                return DataType.REFERENCE;
+                switch (this.getNumberDataType(token.value)) {
+                    case DataType.UINT8:
+                        return DataType.REFERENCE_8;
+                    case DataType.UINT16:
+                        return DataType.REFERENCE_16;
+                    case DataType.UINT32:
+                        return DataType.REFERENCE_32;
+                }
+                throw new Error("Invalid reference value: " + token.value);
         }
         throw new Error("Unrecognized type for ".concat(token.type, " value: ").concat(token.value));
     };
@@ -210,7 +220,9 @@ var DataTypeUtils = /** @class */ (function () {
             case DataType.SPLIT_16:
             case DataType.SPLIT_32:
                 return "split";
-            case DataType.REFERENCE:
+            case DataType.REFERENCE_8:
+            case DataType.REFERENCE_16:
+            case DataType.REFERENCE_32:
                 return "reference";
             default:
                 return "leaf";
