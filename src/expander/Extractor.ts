@@ -170,12 +170,9 @@ class Extractor {
         if (token.cache !== undefined && allowUseCache) {
             return token.cache;
         }
-        if (!getValue) {
-            throw new Error("getValue not provided.");
-        }
 
-        const value = getValue(token, headerTokens, dataTokens, config);
-        if (config.cacheable) {
+        const value = getValue!(token, headerTokens, dataTokens, config);
+        if (config.cacheable && token.type !== "leaf") {
             token.cache = value;
         }
         return value;

@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.22",
+    "version": "1.0.23",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -4283,11 +4283,8 @@ var Extractor = /** @class */ (function () {
         if (token.cache !== undefined && allowUseCache) {
             return token.cache;
         }
-        if (!getValue) {
-            throw new Error("getValue not provided.");
-        }
         var value = getValue(token, headerTokens, dataTokens, config);
-        if (config.cacheable) {
+        if (config.cacheable && token.type !== "leaf") {
             token.cache = value;
         }
         return value;
