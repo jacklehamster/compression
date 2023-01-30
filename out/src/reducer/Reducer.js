@@ -42,12 +42,17 @@ var Reducer = /** @class */ (function () {
             var token = _a[1];
             return hashToIndex[token.nameToken.hash];
         });
-        //  save all files separately
+        //  save all files separately as complex objects.
         var dataTokens = fileEntries.map(function (_a) {
-            var file = _a[0], root = _a[1].token;
+            var root = _a[1].token;
             var subHashToIndex = __assign({}, hashToIndex);
-            var tokens = Object.values(header.registry).filter(function (token) { return token.files.has(file) && token !== root; });
-            return _this.createReducedTokens(tokens, subHashToIndex, headerTokens.length).concat(_this.createReducedTokens([root], subHashToIndex, headerTokens.length));
+            var structure = [];
+            var result = [{
+                    type: "complex",
+                    value: structure
+                }];
+            _this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
+            return result;
         });
         return {
             originalDataSize: header.originalDataSize,
@@ -136,29 +141,29 @@ var Reducer = /** @class */ (function () {
      * @param hashToIndex Hash to index mapping
      * @param result Resulting set of tokens
      */
-    Reducer.prototype.createComplexObject = function (token, hashToIndex, registry, result) {
+    Reducer.prototype.createComplexObject = function (token, hashToIndex, registry, headerTokens, structure, resultDataTokens) {
         var _this = this;
-        var _a;
+        var _a, _b;
         if (hashToIndex[token.hash] >= 0) {
-            result.push({ type: "reference", value: hashToIndex[token.hash] });
+            structure.push(DataType_1.StructureType.LEAF);
+            resultDataTokens.push({ type: "reference", value: hashToIndex[token.hash] });
         }
         else if (token.type === "leaf") {
-            if (token.count > 1) {
-                var index = result.length;
-                hashToIndex[token.hash] = index;
-            }
-            result.push({ type: token.type, value: token.value });
+            structure.push(this.dataTypeUtils.typeToStructureType(token.type));
+            hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
+            resultDataTokens.push({ type: token.type, value: token.value });
         }
         else if (token.type === "split" || token.type === "object" || token.type === "array") {
-            if (token.count > 1) {
-                var index = result.length;
-                hashToIndex[token.hash] = index;
+            structure.push(this.dataTypeUtils.typeToStructureType(token.type));
+            if (token.type === "array") {
+                resultDataTokens.push({ type: "leaf", value: (_a = token.reference) === null || _a === void 0 ? void 0 : _a.length });
             }
-            result.push({ type: token.type, value: undefined });
-            var subTokens = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return registry[hash]; });
+            var subTokens = (_b = token.reference) === null || _b === void 0 ? void 0 : _b.map(function (hash) { return registry[hash]; });
             subTokens === null || subTokens === void 0 ? void 0 : subTokens.forEach(function (token) {
-                _this.createComplexObject(token, hashToIndex, registry, result);
+                _this.createComplexObject(token, hashToIndex, registry, headerTokens, structure, resultDataTokens);
             });
+            // hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
+            // resultDataTokens.push({ type: token.type, value: token.value });
         }
         else {
             throw new Error("Invalid token type");

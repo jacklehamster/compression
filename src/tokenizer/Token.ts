@@ -1,4 +1,4 @@
-export type Type = "leaf" | "array" | "object" | "split" | "reference";
+export type Type = "leaf" | "array" | "object" | "split" | "reference" | "complex";
 export type Hash = string;
 
 export const SPLIT_REGEX = /\W+/g;

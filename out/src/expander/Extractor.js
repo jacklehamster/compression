@@ -10,10 +10,19 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 exports.__esModule = true;
+var DataType_1 = require("../compression/DataType");
 var DEFAULT_CONFIG = {
-    cacheable: true,
-    allowReferences: false
+    cacheable: true
 };
 /**
  * Class storing all data that can be extracted.
@@ -33,16 +42,13 @@ var ExtractableData = /** @class */ (function () {
      * Extract data form a stored file.
      *
      * @param filename filename to be extracted.
-     * @param allowReferences If true, within the extracted object, multiple nodes can reference the same object.
-     *  This helps performance and memory, but can lead to weird side effects if the extracted object
-     *  gets modified.
      * @returns extracted data.
      */
-    ExtractableData.prototype.extract = function (filename, allowReferences) {
+    ExtractableData.prototype.extract = function (filename) {
         var slot = this.fileToSlot[filename];
         var dataTokens = this.dataStore.getDataTokens(slot);
         if (dataTokens) {
-            return this.extractor.extract(this.dataStore.headerTokens, dataTokens, __assign(__assign({}, this.config), { allowReferences: allowReferences !== null && allowReferences !== void 0 ? allowReferences : this.config.allowReferences }));
+            return this.extractor.extract(this.dataStore.headerTokens, dataTokens, this.config);
         }
     };
     ExtractableData.prototype.getHeaderTokens = function () {
@@ -55,10 +61,11 @@ var Extractor = /** @class */ (function () {
     function Extractor() {
         this.valueFetcher = {
             "array": this.getArray.bind(this),
-            "leaf": undefined,
+            "leaf": this.getLeaf.bind(this),
             "object": this.getObject.bind(this),
             "split": this.getSplit.bind(this),
-            "reference": this.getReference.bind(this)
+            "reference": this.getReference.bind(this),
+            "complex": undefined
         };
     }
     Extractor.prototype.extractFileNames = function (files, headerTokens, config) {
@@ -66,17 +73,46 @@ var Extractor = /** @class */ (function () {
         return files.map(function (index) { return _this.extractToken(index, headerTokens, undefined, config); });
     };
     Extractor.prototype.extract = function (headerTokens, dataTokens, config) {
-        return this.extractToken(headerTokens.length + dataTokens.length - 1, headerTokens, dataTokens, config);
+        var tokenStream = dataTokens.entries();
+        var _a = tokenStream.next().value, complexToken = _a[1];
+        var structure = complexToken.value;
+        var token = this.extractComplex(structure.entries(), tokenStream, headerTokens, __spreadArray([], dataTokens, true), config);
+        return token;
     };
-    Extractor.prototype.extractToken = function (index, headerTokens, dataTokens, config, forceAllowUseCache) {
+    Extractor.prototype.extractComplex = function (structure, tokenStream, headerTokens, dataTokens, config) {
+        var _this = this;
+        var _a = structure.next().value, structureType = _a[1];
+        switch (structureType) {
+            case DataType_1.StructureType.LEAF:
+                var _b = tokenStream.next().value, leafToken = _b[1];
+                var value = this.extractValueOrCache(leafToken, headerTokens, dataTokens, config, true, this.valueFetcher[leafToken.type]);
+                return value;
+            case DataType_1.StructureType.ARRAY:
+                var _c = tokenStream.next().value, numToken = _c[1];
+                var array = new Array(numToken.value).fill(null)
+                    .map(function (_) { return _this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config); });
+                return array;
+            case DataType_1.StructureType.OBJECT:
+                var keys = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var values_1 = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var object = Object.fromEntries(keys.map(function (key, index) { return [key, values_1[index]]; }));
+                return object;
+            case DataType_1.StructureType.SPLIT:
+                var chunks = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var separators_1 = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var split = chunks.map(function (chunk, index) { var _a; return "".concat(chunk).concat((_a = separators_1[index]) !== null && _a !== void 0 ? _a : ""); }).join("");
+                return split;
+        }
+    };
+    Extractor.prototype.extractToken = function (index, headerTokens, dataTokens, config, allowUseCache) {
         var token = index < headerTokens.length ? headerTokens[index] : dataTokens === null || dataTokens === void 0 ? void 0 : dataTokens[index - headerTokens.length];
         if (!token) {
             throw new Error("Invalid token at index: " + index);
         }
-        if (token.type === "leaf") {
-            return token.value;
-        }
-        return this.extractValueOrCache(token, headerTokens, dataTokens, config, forceAllowUseCache || config.allowReferences, this.valueFetcher[token.type]);
+        return this.extractValueOrCache(token, headerTokens, dataTokens, config, allowUseCache, this.valueFetcher[token.type]);
+    };
+    Extractor.prototype.getLeaf = function (token) {
+        return token.value;
     };
     Extractor.prototype.getReference = function (token, headerTokens, dataTokens, config) {
         var index = token.value;

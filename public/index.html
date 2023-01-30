@@ -80,28 +80,25 @@
           time = performance.now();
           const extractedData = extractable.extract(file);
           console.log("Time to expand %s: %s", file, performance.now() - time);
-          console.log([file, extractedData]);
+          console.log([file, extractedData, originalData[index]]);
           console.assert(JSON.stringify(originalData[index]) === JSON.stringify(extractedData));
         });
 
-        const repeatObject = extractable.extract("data/data-repeat-object.json");
-        console.assert(repeatObject.a === repeatObject.b);
-
-        const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json", false);
+        const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json");
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
 
-        try {
-         const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
-         const turtleData = eTest.extract("games/turtle/turtle.json", true);
-         console.log("Version", eTest.version);
-         console.log("Number of files stored:", eTest.fileNames.length);
-         console.log("Turtle data", turtleData);
-         console.log("Original data size", eTest.originalDataSize);
-         console.log("Compressed size", eTest.compressedSize);
-         console.log(eTest.getHeaderTokens());
-        } catch (e) {
-          console.error(e.message);
-        }
+        // try {
+        //  const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
+        //  const turtleData = eTest.extract("games/turtle/turtle.json", true);
+        //  console.log("Version", eTest.version);
+        //  console.log("Number of files stored:", eTest.fileNames.length);
+        //  console.log("Turtle data", turtleData);
+        //  console.log("Original data size", eTest.originalDataSize);
+        //  console.log("Compressed size", eTest.compressedSize);
+        //  console.log(eTest.getHeaderTokens());
+        // } catch (e) {
+        //   console.error(e.message);
+        // }
       });
     </script>
 

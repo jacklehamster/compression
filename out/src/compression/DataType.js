@@ -1,6 +1,14 @@
 "use strict";
 exports.__esModule = true;
-exports.DataTypeUtils = exports.NUMBER_DATA_TYPES = exports.DataType = void 0;
+exports.DataTypeUtils = exports.NUMBER_DATA_TYPES = exports.DataType = exports.StructureType = void 0;
+var StructureType;
+(function (StructureType) {
+    StructureType[StructureType["LEAF"] = 0] = "LEAF";
+    StructureType[StructureType["ARRAY"] = 1] = "ARRAY";
+    StructureType[StructureType["OBJECT"] = 2] = "OBJECT";
+    StructureType[StructureType["SPLIT"] = 3] = "SPLIT";
+})(StructureType = exports.StructureType || (exports.StructureType = {}));
+;
 var DataType;
 (function (DataType) {
     DataType[DataType["UNDEFINED"] = 0] = "UNDEFINED";
@@ -127,6 +135,8 @@ var DataTypeUtils = /** @class */ (function () {
     };
     DataTypeUtils.prototype.getDataType = function (token) {
         switch (token.type) {
+            case "complex":
+                return DataType.COMPLEX_OBJECT;
             case "array":
             case "object":
             case "split":
@@ -207,6 +217,8 @@ var DataTypeUtils = /** @class */ (function () {
     };
     DataTypeUtils.prototype.dataTypeToType = function (dataType) {
         switch (dataType) {
+            case DataType.COMPLEX_OBJECT:
+                return "complex";
             case DataType.EMPTY_ARRAY:
             case DataType.ARRAY_8:
             case DataType.ARRAY_16:
@@ -227,6 +239,19 @@ var DataTypeUtils = /** @class */ (function () {
             default:
                 return "leaf";
         }
+    };
+    DataTypeUtils.prototype.typeToStructureType = function (type) {
+        switch (type) {
+            case "leaf":
+                return StructureType.LEAF;
+            case "array":
+                return StructureType.ARRAY;
+            case "object":
+                return StructureType.OBJECT;
+            case "split":
+                return StructureType.SPLIT;
+        }
+        throw new Error("Cannot translate to structure type: " + type);
     };
     return DataTypeUtils;
 }());

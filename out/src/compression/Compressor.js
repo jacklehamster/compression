@@ -135,7 +135,7 @@ var Compressor = /** @class */ (function () {
         var streamDataView = new stream_data_view_1.StreamDataView();
         var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
         //  Write header tokens
-        tokenEncoder.encodeTokens(dataStore.headerTokens);
+        tokenEncoder.encodeTokens(dataStore.headerTokens, true);
         //  Write fileNames
         tokenEncoder.encodeNumberArray(dataStore.files);
         var finalStream = new stream_data_view_1.StreamDataView();
@@ -157,7 +157,7 @@ var Compressor = /** @class */ (function () {
         for (var index = 0; index < dataStore.files.length; index++) {
             var subStream = new stream_data_view_1.StreamDataView();
             var subEncoder = new TokenEncoder_1["default"](subStream);
-            subEncoder.encodeTokens(dataStore.getDataTokens(index));
+            subEncoder.encodeTokens(dataStore.getDataTokens(index), false);
             //  save and compress buffer
             var subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
             finalStream.setNextUint32(subBuffer.byteLength);
@@ -189,7 +189,7 @@ var Compressor = /** @class */ (function () {
         var headerByteLength = globalStream.getNextUint32();
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
         var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
-        var headerTokens = headerTokenEncoder.decodeTokens();
+        var headerTokens = headerTokenEncoder.decodeTokens(true);
         var files = headerTokenEncoder.decodeNumberArray();
         var subBuffers = [];
         do {
@@ -203,7 +203,7 @@ var Compressor = /** @class */ (function () {
             var subBuffer = _this.applyDecoders(subBuffers[index], decoders);
             var streamDataView = new stream_data_view_1.StreamDataView(subBuffer);
             var tokenDecoder = new TokenEncoder_1["default"](streamDataView);
-            return tokenDecoder.decodeTokens();
+            return tokenDecoder.decodeTokens(false);
         };
         //  The remaining from streamDataView is extra. Some compressed data don't have it.
         var originalDataSize;

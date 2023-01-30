@@ -1,21 +1,19 @@
+import { StructureType } from "../compression/DataType";
 import { DataStore } from "../reducer/Reducer";
 import { ReducedToken, Type } from "../tokenizer/Token";
 
 /**
  * Configuration that can be passed.
  * - cacheable: We can use cache to boost extraction speed. This uses a bit more memory.
- * - allowReferences: within the extracted object, multiple nodes can reference the same object.
  * This helps performance and memory, but can lead to weird side effects if the extracted object
  * gets modified.
  */
 export interface ExtractionConfig {
     cacheable: boolean;
-    allowReferences: boolean;
 }
 
 const DEFAULT_CONFIG: ExtractionConfig = {
     cacheable: true,
-    allowReferences: false,
 }
 
 /**
@@ -48,19 +46,13 @@ export default class ExtractableData {
      * Extract data form a stored file.
      *
      * @param filename filename to be extracted.
-     * @param allowReferences If true, within the extracted object, multiple nodes can reference the same object.
-     *  This helps performance and memory, but can lead to weird side effects if the extracted object
-     *  gets modified.
      * @returns extracted data.
      */
-    extract(filename: string, allowReferences?: boolean) {
+    extract(filename: string) {
         const slot = this.fileToSlot[filename];
         const dataTokens = this.dataStore.getDataTokens(slot);
         if (dataTokens) {
-            return this.extractor.extract(this.dataStore.headerTokens, dataTokens, {
-                ...this.config,
-                allowReferences : allowReferences ?? this.config.allowReferences,
-            });
+            return this.extractor.extract(this.dataStore.headerTokens, dataTokens, this.config);
         }
     }
 
@@ -75,10 +67,11 @@ class Extractor {
     constructor() {
         this.valueFetcher = {
             "array": this.getArray.bind(this),
-            "leaf": undefined,
+            "leaf": this.getLeaf.bind(this),
             "object": this.getObject.bind(this),
             "split": this.getSplit.bind(this),
             "reference": this.getReference.bind(this),
+            "complex": undefined,
         };
     }
 
@@ -87,26 +80,57 @@ class Extractor {
     }
 
     extract(headerTokens: ReducedToken[], dataTokens: ReducedToken[], config: ExtractionConfig) {
-        return this.extractToken(headerTokens.length + dataTokens.length - 1, headerTokens, dataTokens, config);
+        const tokenStream = dataTokens.entries();
+        const [,complexToken] = tokenStream.next().value;
+        const structure: StructureType[] = complexToken.value;
+        const token = this.extractComplex(structure.entries(), tokenStream, headerTokens, [...dataTokens], config);
+        return token;
+    }
+
+    private extractComplex(structure: Iterator<[number, StructureType]>, tokenStream: Iterator<[number, ReducedToken]>, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig): any {
+        const [, structureType] = structure.next().value;
+        switch (structureType) {
+            case StructureType.LEAF:
+                const [,leafToken]: [number, ReducedToken] = tokenStream.next().value;
+                const value = this.extractValueOrCache(leafToken, headerTokens, dataTokens, config, true, this.valueFetcher[leafToken.type]);
+                return value;
+            case StructureType.ARRAY:
+                const [,numToken]: [number, ReducedToken] = tokenStream.next().value;
+                const array = new Array(numToken.value).fill(null)
+                    .map(_ => this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config));
+                return array;
+            case StructureType.OBJECT:
+                const keys: string[] = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                const values: any[] = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                const object = Object.fromEntries(keys.map((key, index) => [key, values[index]]));
+                return object;
+            case StructureType.SPLIT:
+                const chunks: string[] = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                const separators: string[] = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                const split = chunks.map((chunk, index) => `${chunk}${separators[index] ?? ""}`).join("");
+                return split;
+
+        }
     }
 
     private extractToken(index: number, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined,
-            config: ExtractionConfig, forceAllowUseCache?: boolean): any {
+            config: ExtractionConfig, allowUseCache?: boolean): any {
         const token = index < headerTokens.length ? headerTokens[index] : dataTokens?.[index - headerTokens.length];
         if (!token) {
             throw new Error("Invalid token at index: " + index);            
-        }
-        if (token.type === "leaf") {
-            return token.value;
         }
         return this.extractValueOrCache(
                 token,
                 headerTokens,
                 dataTokens,
                 config,
-                forceAllowUseCache || config.allowReferences,
+                allowUseCache,
                 this.valueFetcher[token.type]
             );
+    }
+
+    private getLeaf(token: ReducedToken) {
+        return token.value;
     }
 
     private getReference(token: ReducedToken, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig): any {
@@ -140,7 +164,7 @@ class Extractor {
         headerTokens: ReducedToken[],
         dataTokens: ReducedToken[] | undefined,
         config: ExtractionConfig,
-        allowUseCache: boolean,
+        allowUseCache?: boolean,
         getValue?: (token: ReducedToken, headerTokens: ReducedToken[], dataTokens: ReducedToken[] | undefined, config: ExtractionConfig) => T): T {
         
         if (token.cache !== undefined && allowUseCache) {

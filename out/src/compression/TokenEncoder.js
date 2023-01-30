@@ -1,6 +1,6 @@
 "use strict";
 exports.__esModule = true;
-//18033
+//13578
 var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
 var TokenEncoder = /** @class */ (function () {
@@ -8,20 +8,20 @@ var TokenEncoder = /** @class */ (function () {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
         this.streamDataView = streamDataView;
     }
-    TokenEncoder.prototype.encodeTokens = function (tokens) {
+    TokenEncoder.prototype.encodeTokens = function (tokens, organized) {
         var pos = 0;
         while (pos < tokens.length) {
-            var count = this.encodeMulti(tokens, pos);
+            var count = this.encodeMulti(tokens, pos, organized);
             if (count) {
                 pos += count;
             }
         }
-        this.encodeMulti([], pos);
+        this.encodeMulti([], pos, organized);
     };
-    TokenEncoder.prototype.decodeTokens = function () {
+    TokenEncoder.prototype.decodeTokens = function (organized) {
         var tokens = [];
         while (this.streamDataView.getOffset() < this.streamDataView.getLength()) {
-            if (!this.decodeMulti(tokens)) {
+            if (!this.decodeMulti(tokens, organized)) {
                 break;
             }
         }
@@ -73,6 +73,9 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.REFERENCE_32:
                 this.encodeReferenceToken(token, usedDataType);
                 break;
+            case DataType_1.DataType.COMPLEX_OBJECT:
+                this.encodeComplexToken(token, usedDataType);
+                break;
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
@@ -117,6 +120,12 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.OFFSET_ARRAY_16:
             case DataType_1.DataType.OFFSET_ARRAY_32:
                 return this.decodeArrayToken(usedDataType);
+            case DataType_1.DataType.REFERENCE_8:
+            case DataType_1.DataType.REFERENCE_16:
+            case DataType_1.DataType.REFERENCE_32:
+                return this.decodeReferenceToken(usedDataType);
+            case DataType_1.DataType.COMPLEX_OBJECT:
+                return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
@@ -199,14 +208,29 @@ var TokenEncoder = /** @class */ (function () {
             value: this.decodeSingleNumber(numberType)
         };
     };
+    TokenEncoder.prototype.encodeComplexToken = function (token, dataType) {
+        if (dataType === undefined) {
+            this.encodeDataType(this.dataTypeUtils.getDataType(token));
+        }
+        this.encodeNumberArray(token.value, DataType_1.DataType.UINT8);
+    };
+    TokenEncoder.prototype.decodeComplexToken = function (dataType) {
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
+        var structure = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        return {
+            type: this.dataTypeUtils.dataTypeToType(usedDataType),
+            value: structure
+        };
+    };
     TokenEncoder.prototype.encodeDataType = function (dataType) {
         this.streamDataView.setNextUint8(dataType);
         return dataType;
     };
     TokenEncoder.prototype.decodeDataType = function () {
-        return this.streamDataView.getNextUint8();
+        var dataType = this.streamDataView.getNextUint8();
+        return dataType;
     };
-    TokenEncoder.prototype.encodeMulti = function (tokens, pos) {
+    TokenEncoder.prototype.encodeMulti = function (tokens, pos, organized) {
         if (pos >= tokens.length) {
             this.encodeSingleNumber(0, DataType_1.DataType.UINT8);
             return 0;
@@ -222,19 +246,19 @@ var TokenEncoder = /** @class */ (function () {
         //  encode a multi, meaning that the same type is going to get repeated multiple times
         this.encodeSingleNumber(multiCount, DataType_1.DataType.UINT8);
         this.encodeDataType(firstType);
-        var multiInfo = {};
+        var multiInfo = { organized: organized };
         for (var i = 0; i < multiCount; i++) {
             this.encodeToken(tokens[pos + i], firstType, multiInfo);
         }
         return multiCount;
     };
-    TokenEncoder.prototype.decodeMulti = function (tokens) {
+    TokenEncoder.prototype.decodeMulti = function (tokens, organized) {
         var count = this.streamDataView.getNextUint8();
         if (!count) {
             return 0;
         }
         var dataType = this.decodeDataType();
-        var multiInfo = {};
+        var multiInfo = { organized: organized };
         for (var i = 0; i < count; i++) {
             var token = this.decodeToken(dataType, multiInfo);
             tokens.push(token);
@@ -333,7 +357,7 @@ var TokenEncoder = /** @class */ (function () {
         var _this = this;
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
         // const min = Math.min(...letterCodes);
-        if (!multiInfo || multiInfo.lastStringLength !== value.length) {
+        if (!(multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.organized) || multiInfo.lastStringLength !== value.length) {
             letterCodes.push(0);
         }
         // console.log(letterCodes, value, (letterCodes).map((value) => !value ? 0 : value - min + 1));
@@ -354,7 +378,7 @@ var TokenEncoder = /** @class */ (function () {
                 break;
             }
             charCodes.push(code);
-            if ((multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength) && charCodes.length >= (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength)) {
+            if ((multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.organized) && (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength) && charCodes.length >= (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength)) {
                 break;
             }
         } while (true);
@@ -383,9 +407,9 @@ var TokenEncoder = /** @class */ (function () {
                     { type: "leaf", value: 45 },
                     { type: "leaf", value: 67 },
                     { type: "leaf", value: 89 },
-                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
+                ], function (header) { return tokenEncoder.encodeMulti(header, 0, false); }, reset, function () {
                     var result = [];
-                    tokenDecoder.decodeMulti(result);
+                    tokenDecoder.decodeMulti(result, false);
                     return result;
                 });
             },
@@ -394,9 +418,9 @@ var TokenEncoder = /** @class */ (function () {
                     { type: "leaf", value: 1000001 },
                     { type: "leaf", value: 1002000 },
                     { type: "leaf", value: 1003001 },
-                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
+                ], function (header) { return tokenEncoder.encodeMulti(header, 0, false); }, reset, function () {
                     var result = [];
-                    tokenDecoder.decodeMulti(result);
+                    tokenDecoder.decodeMulti(result, false);
                     return result;
                 });
             },
@@ -472,7 +496,7 @@ var TokenEncoder = /** @class */ (function () {
                         value: new Array(index).fill(null).map(function (_, index) { return index; })
                     };
                     return token;
-                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+                }), function (o) { return tokenEncoder.encodeTokens(o, false); }, reset, function () { return tokenDecoder.decodeTokens(false); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction(new Array(260).fill(null).map(function (_, index) {
@@ -481,7 +505,7 @@ var TokenEncoder = /** @class */ (function () {
                         value: new Array(index).fill(null).map(function (_, index) { return index; })
                     };
                     return token;
-                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+                }), function (o) { return tokenEncoder.encodeTokens(o, false); }, reset, function () { return tokenDecoder.decodeTokens(false); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction(new Array(260).fill(null).map(function (_, index) {
@@ -490,7 +514,10 @@ var TokenEncoder = /** @class */ (function () {
                         value: [1]
                     };
                     return token;
-                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+                }), function (o) { return tokenEncoder.encodeTokens(o, false); }, reset, function () { return tokenDecoder.decodeTokens(false); });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction({ type: "complex", value: [1, 2, 3, 2, 1, 2, 1, 0] }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
         ];
         testers.forEach(function (tester, index) {

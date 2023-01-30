@@ -1,5 +1,12 @@
 import Token, { StoredToken, Type } from "../tokenizer/Token";
 
+export enum StructureType {
+    LEAF = 0,
+    ARRAY = 1,
+    OBJECT = 2,
+    SPLIT = 3,
+};
+
 export enum DataType {
     UNDEFINED = 0,
     NULL = 1,
@@ -130,6 +137,8 @@ export class DataTypeUtils {
 
     getDataType(token: StoredToken): DataType {
         switch (token.type) {
+            case "complex":
+                return DataType.COMPLEX_OBJECT;
             case "array":
             case "object":
             case "split":
@@ -208,6 +217,8 @@ export class DataTypeUtils {
 
     dataTypeToType(dataType: DataType): Type {
         switch(dataType) {
+            case DataType.COMPLEX_OBJECT:
+                return "complex";
             case DataType.EMPTY_ARRAY:
             case DataType.ARRAY_8:
             case DataType.ARRAY_16:
@@ -228,5 +239,19 @@ export class DataTypeUtils {
             default:
                 return "leaf";
         }
+    }
+
+    typeToStructureType(type: Type): StructureType {
+        switch (type) {
+            case "leaf":
+                return StructureType.LEAF;
+            case "array":
+                return StructureType.ARRAY;
+            case "object":
+                return StructureType.OBJECT;
+            case "split":
+                return StructureType.SPLIT;
+        }
+        throw new Error("Cannot translate to structure type: " + type);
     }
 }

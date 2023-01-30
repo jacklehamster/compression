@@ -3161,7 +3161,7 @@ var Compressor = /** @class */ (function () {
         var streamDataView = new stream_data_view_1.StreamDataView();
         var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
         //  Write header tokens
-        tokenEncoder.encodeTokens(dataStore.headerTokens);
+        tokenEncoder.encodeTokens(dataStore.headerTokens, true);
         //  Write fileNames
         tokenEncoder.encodeNumberArray(dataStore.files);
         var finalStream = new stream_data_view_1.StreamDataView();
@@ -3183,7 +3183,7 @@ var Compressor = /** @class */ (function () {
         for (var index = 0; index < dataStore.files.length; index++) {
             var subStream = new stream_data_view_1.StreamDataView();
             var subEncoder = new TokenEncoder_1["default"](subStream);
-            subEncoder.encodeTokens(dataStore.getDataTokens(index));
+            subEncoder.encodeTokens(dataStore.getDataTokens(index), false);
             //  save and compress buffer
             var subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
             finalStream.setNextUint32(subBuffer.byteLength);
@@ -3215,7 +3215,7 @@ var Compressor = /** @class */ (function () {
         var headerByteLength = globalStream.getNextUint32();
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
         var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
-        var headerTokens = headerTokenEncoder.decodeTokens();
+        var headerTokens = headerTokenEncoder.decodeTokens(true);
         var files = headerTokenEncoder.decodeNumberArray();
         var subBuffers = [];
         do {
@@ -3229,7 +3229,7 @@ var Compressor = /** @class */ (function () {
             var subBuffer = _this.applyDecoders(subBuffers[index], decoders);
             var streamDataView = new stream_data_view_1.StreamDataView(subBuffer);
             var tokenDecoder = new TokenEncoder_1["default"](streamDataView);
-            return tokenDecoder.decodeTokens();
+            return tokenDecoder.decodeTokens(false);
         };
         //  The remaining from streamDataView is extra. Some compressed data don't have it.
         var originalDataSize;
@@ -3254,7 +3254,15 @@ exports["default"] = Compressor;
 },{"../../package.json":5,"../expander/Extractor":10,"../reducer/Reducer":13,"../tokenizer/Tokenizer":15,"./FFlateEncoder":8,"./TokenEncoder":9,"stream-data-view":4}],7:[function(require,module,exports){
 "use strict";
 exports.__esModule = true;
-exports.DataTypeUtils = exports.NUMBER_DATA_TYPES = exports.DataType = void 0;
+exports.DataTypeUtils = exports.NUMBER_DATA_TYPES = exports.DataType = exports.StructureType = void 0;
+var StructureType;
+(function (StructureType) {
+    StructureType[StructureType["LEAF"] = 0] = "LEAF";
+    StructureType[StructureType["ARRAY"] = 1] = "ARRAY";
+    StructureType[StructureType["OBJECT"] = 2] = "OBJECT";
+    StructureType[StructureType["SPLIT"] = 3] = "SPLIT";
+})(StructureType = exports.StructureType || (exports.StructureType = {}));
+;
 var DataType;
 (function (DataType) {
     DataType[DataType["UNDEFINED"] = 0] = "UNDEFINED";
@@ -3381,6 +3389,8 @@ var DataTypeUtils = /** @class */ (function () {
     };
     DataTypeUtils.prototype.getDataType = function (token) {
         switch (token.type) {
+            case "complex":
+                return DataType.COMPLEX_OBJECT;
             case "array":
             case "object":
             case "split":
@@ -3461,6 +3471,8 @@ var DataTypeUtils = /** @class */ (function () {
     };
     DataTypeUtils.prototype.dataTypeToType = function (dataType) {
         switch (dataType) {
+            case DataType.COMPLEX_OBJECT:
+                return "complex";
             case DataType.EMPTY_ARRAY:
             case DataType.ARRAY_8:
             case DataType.ARRAY_16:
@@ -3481,6 +3493,19 @@ var DataTypeUtils = /** @class */ (function () {
             default:
                 return "leaf";
         }
+    };
+    DataTypeUtils.prototype.typeToStructureType = function (type) {
+        switch (type) {
+            case "leaf":
+                return StructureType.LEAF;
+            case "array":
+                return StructureType.ARRAY;
+            case "object":
+                return StructureType.OBJECT;
+            case "split":
+                return StructureType.SPLIT;
+        }
+        throw new Error("Cannot translate to structure type: " + type);
     };
     return DataTypeUtils;
 }());
@@ -3529,7 +3554,7 @@ exports["default"] = FFlateEncoder;
 },{"fflate":2}],9:[function(require,module,exports){
 "use strict";
 exports.__esModule = true;
-//18033
+//13578
 var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
 var TokenEncoder = /** @class */ (function () {
@@ -3537,20 +3562,20 @@ var TokenEncoder = /** @class */ (function () {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
         this.streamDataView = streamDataView;
     }
-    TokenEncoder.prototype.encodeTokens = function (tokens) {
+    TokenEncoder.prototype.encodeTokens = function (tokens, organized) {
         var pos = 0;
         while (pos < tokens.length) {
-            var count = this.encodeMulti(tokens, pos);
+            var count = this.encodeMulti(tokens, pos, organized);
             if (count) {
                 pos += count;
             }
         }
-        this.encodeMulti([], pos);
+        this.encodeMulti([], pos, organized);
     };
-    TokenEncoder.prototype.decodeTokens = function () {
+    TokenEncoder.prototype.decodeTokens = function (organized) {
         var tokens = [];
         while (this.streamDataView.getOffset() < this.streamDataView.getLength()) {
-            if (!this.decodeMulti(tokens)) {
+            if (!this.decodeMulti(tokens, organized)) {
                 break;
             }
         }
@@ -3602,6 +3627,9 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.REFERENCE_32:
                 this.encodeReferenceToken(token, usedDataType);
                 break;
+            case DataType_1.DataType.COMPLEX_OBJECT:
+                this.encodeComplexToken(token, usedDataType);
+                break;
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
@@ -3646,6 +3674,12 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.OFFSET_ARRAY_16:
             case DataType_1.DataType.OFFSET_ARRAY_32:
                 return this.decodeArrayToken(usedDataType);
+            case DataType_1.DataType.REFERENCE_8:
+            case DataType_1.DataType.REFERENCE_16:
+            case DataType_1.DataType.REFERENCE_32:
+                return this.decodeReferenceToken(usedDataType);
+            case DataType_1.DataType.COMPLEX_OBJECT:
+                return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
@@ -3728,14 +3762,29 @@ var TokenEncoder = /** @class */ (function () {
             value: this.decodeSingleNumber(numberType)
         };
     };
+    TokenEncoder.prototype.encodeComplexToken = function (token, dataType) {
+        if (dataType === undefined) {
+            this.encodeDataType(this.dataTypeUtils.getDataType(token));
+        }
+        this.encodeNumberArray(token.value, DataType_1.DataType.UINT8);
+    };
+    TokenEncoder.prototype.decodeComplexToken = function (dataType) {
+        var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
+        var structure = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        return {
+            type: this.dataTypeUtils.dataTypeToType(usedDataType),
+            value: structure
+        };
+    };
     TokenEncoder.prototype.encodeDataType = function (dataType) {
         this.streamDataView.setNextUint8(dataType);
         return dataType;
     };
     TokenEncoder.prototype.decodeDataType = function () {
-        return this.streamDataView.getNextUint8();
+        var dataType = this.streamDataView.getNextUint8();
+        return dataType;
     };
-    TokenEncoder.prototype.encodeMulti = function (tokens, pos) {
+    TokenEncoder.prototype.encodeMulti = function (tokens, pos, organized) {
         if (pos >= tokens.length) {
             this.encodeSingleNumber(0, DataType_1.DataType.UINT8);
             return 0;
@@ -3751,19 +3800,19 @@ var TokenEncoder = /** @class */ (function () {
         //  encode a multi, meaning that the same type is going to get repeated multiple times
         this.encodeSingleNumber(multiCount, DataType_1.DataType.UINT8);
         this.encodeDataType(firstType);
-        var multiInfo = {};
+        var multiInfo = { organized: organized };
         for (var i = 0; i < multiCount; i++) {
             this.encodeToken(tokens[pos + i], firstType, multiInfo);
         }
         return multiCount;
     };
-    TokenEncoder.prototype.decodeMulti = function (tokens) {
+    TokenEncoder.prototype.decodeMulti = function (tokens, organized) {
         var count = this.streamDataView.getNextUint8();
         if (!count) {
             return 0;
         }
         var dataType = this.decodeDataType();
-        var multiInfo = {};
+        var multiInfo = { organized: organized };
         for (var i = 0; i < count; i++) {
             var token = this.decodeToken(dataType, multiInfo);
             tokens.push(token);
@@ -3862,7 +3911,7 @@ var TokenEncoder = /** @class */ (function () {
         var _this = this;
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
         // const min = Math.min(...letterCodes);
-        if (!multiInfo || multiInfo.lastStringLength !== value.length) {
+        if (!(multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.organized) || multiInfo.lastStringLength !== value.length) {
             letterCodes.push(0);
         }
         // console.log(letterCodes, value, (letterCodes).map((value) => !value ? 0 : value - min + 1));
@@ -3883,7 +3932,7 @@ var TokenEncoder = /** @class */ (function () {
                 break;
             }
             charCodes.push(code);
-            if ((multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength) && charCodes.length >= (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength)) {
+            if ((multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.organized) && (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength) && charCodes.length >= (multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.lastStringLength)) {
                 break;
             }
         } while (true);
@@ -3912,9 +3961,9 @@ var TokenEncoder = /** @class */ (function () {
                     { type: "leaf", value: 45 },
                     { type: "leaf", value: 67 },
                     { type: "leaf", value: 89 },
-                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
+                ], function (header) { return tokenEncoder.encodeMulti(header, 0, false); }, reset, function () {
                     var result = [];
-                    tokenDecoder.decodeMulti(result);
+                    tokenDecoder.decodeMulti(result, false);
                     return result;
                 });
             },
@@ -3923,9 +3972,9 @@ var TokenEncoder = /** @class */ (function () {
                     { type: "leaf", value: 1000001 },
                     { type: "leaf", value: 1002000 },
                     { type: "leaf", value: 1003001 },
-                ], function (header) { return tokenEncoder.encodeMulti(header, 0); }, reset, function () {
+                ], function (header) { return tokenEncoder.encodeMulti(header, 0, false); }, reset, function () {
                     var result = [];
-                    tokenDecoder.decodeMulti(result);
+                    tokenDecoder.decodeMulti(result, false);
                     return result;
                 });
             },
@@ -4001,7 +4050,7 @@ var TokenEncoder = /** @class */ (function () {
                         value: new Array(index).fill(null).map(function (_, index) { return index; })
                     };
                     return token;
-                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+                }), function (o) { return tokenEncoder.encodeTokens(o, false); }, reset, function () { return tokenDecoder.decodeTokens(false); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction(new Array(260).fill(null).map(function (_, index) {
@@ -4010,7 +4059,7 @@ var TokenEncoder = /** @class */ (function () {
                         value: new Array(index).fill(null).map(function (_, index) { return index; })
                     };
                     return token;
-                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+                }), function (o) { return tokenEncoder.encodeTokens(o, false); }, reset, function () { return tokenDecoder.decodeTokens(false); });
             },
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction(new Array(260).fill(null).map(function (_, index) {
@@ -4019,7 +4068,10 @@ var TokenEncoder = /** @class */ (function () {
                         value: [1]
                     };
                     return token;
-                }), function (o) { return tokenEncoder.encodeTokens(o); }, reset, function () { return tokenDecoder.decodeTokens(); });
+                }), function (o) { return tokenEncoder.encodeTokens(o, false); }, reset, function () { return tokenDecoder.decodeTokens(false); });
+            },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction({ type: "complex", value: [1, 2, 3, 2, 1, 2, 1, 0] }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
         ];
         testers.forEach(function (tester, index) {
@@ -4056,10 +4108,19 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 exports.__esModule = true;
+var DataType_1 = require("../compression/DataType");
 var DEFAULT_CONFIG = {
-    cacheable: true,
-    allowReferences: false
+    cacheable: true
 };
 /**
  * Class storing all data that can be extracted.
@@ -4079,16 +4140,13 @@ var ExtractableData = /** @class */ (function () {
      * Extract data form a stored file.
      *
      * @param filename filename to be extracted.
-     * @param allowReferences If true, within the extracted object, multiple nodes can reference the same object.
-     *  This helps performance and memory, but can lead to weird side effects if the extracted object
-     *  gets modified.
      * @returns extracted data.
      */
-    ExtractableData.prototype.extract = function (filename, allowReferences) {
+    ExtractableData.prototype.extract = function (filename) {
         var slot = this.fileToSlot[filename];
         var dataTokens = this.dataStore.getDataTokens(slot);
         if (dataTokens) {
-            return this.extractor.extract(this.dataStore.headerTokens, dataTokens, __assign(__assign({}, this.config), { allowReferences: allowReferences !== null && allowReferences !== void 0 ? allowReferences : this.config.allowReferences }));
+            return this.extractor.extract(this.dataStore.headerTokens, dataTokens, this.config);
         }
     };
     ExtractableData.prototype.getHeaderTokens = function () {
@@ -4101,10 +4159,11 @@ var Extractor = /** @class */ (function () {
     function Extractor() {
         this.valueFetcher = {
             "array": this.getArray.bind(this),
-            "leaf": undefined,
+            "leaf": this.getLeaf.bind(this),
             "object": this.getObject.bind(this),
             "split": this.getSplit.bind(this),
-            "reference": this.getReference.bind(this)
+            "reference": this.getReference.bind(this),
+            "complex": undefined
         };
     }
     Extractor.prototype.extractFileNames = function (files, headerTokens, config) {
@@ -4112,17 +4171,46 @@ var Extractor = /** @class */ (function () {
         return files.map(function (index) { return _this.extractToken(index, headerTokens, undefined, config); });
     };
     Extractor.prototype.extract = function (headerTokens, dataTokens, config) {
-        return this.extractToken(headerTokens.length + dataTokens.length - 1, headerTokens, dataTokens, config);
+        var tokenStream = dataTokens.entries();
+        var _a = tokenStream.next().value, complexToken = _a[1];
+        var structure = complexToken.value;
+        var token = this.extractComplex(structure.entries(), tokenStream, headerTokens, __spreadArray([], dataTokens, true), config);
+        return token;
     };
-    Extractor.prototype.extractToken = function (index, headerTokens, dataTokens, config, forceAllowUseCache) {
+    Extractor.prototype.extractComplex = function (structure, tokenStream, headerTokens, dataTokens, config) {
+        var _this = this;
+        var _a = structure.next().value, structureType = _a[1];
+        switch (structureType) {
+            case DataType_1.StructureType.LEAF:
+                var _b = tokenStream.next().value, leafToken = _b[1];
+                var value = this.extractValueOrCache(leafToken, headerTokens, dataTokens, config, true, this.valueFetcher[leafToken.type]);
+                return value;
+            case DataType_1.StructureType.ARRAY:
+                var _c = tokenStream.next().value, numToken = _c[1];
+                var array = new Array(numToken.value).fill(null)
+                    .map(function (_) { return _this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config); });
+                return array;
+            case DataType_1.StructureType.OBJECT:
+                var keys = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var values_1 = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var object = Object.fromEntries(keys.map(function (key, index) { return [key, values_1[index]]; }));
+                return object;
+            case DataType_1.StructureType.SPLIT:
+                var chunks = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var separators_1 = this.extractComplex(structure, tokenStream, headerTokens, dataTokens, config);
+                var split = chunks.map(function (chunk, index) { var _a; return "".concat(chunk).concat((_a = separators_1[index]) !== null && _a !== void 0 ? _a : ""); }).join("");
+                return split;
+        }
+    };
+    Extractor.prototype.extractToken = function (index, headerTokens, dataTokens, config, allowUseCache) {
         var token = index < headerTokens.length ? headerTokens[index] : dataTokens === null || dataTokens === void 0 ? void 0 : dataTokens[index - headerTokens.length];
         if (!token) {
             throw new Error("Invalid token at index: " + index);
         }
-        if (token.type === "leaf") {
-            return token.value;
-        }
-        return this.extractValueOrCache(token, headerTokens, dataTokens, config, forceAllowUseCache || config.allowReferences, this.valueFetcher[token.type]);
+        return this.extractValueOrCache(token, headerTokens, dataTokens, config, allowUseCache, this.valueFetcher[token.type]);
+    };
+    Extractor.prototype.getLeaf = function (token) {
+        return token.value;
     };
     Extractor.prototype.getReference = function (token, headerTokens, dataTokens, config) {
         var index = token.value;
@@ -4163,7 +4251,7 @@ var Extractor = /** @class */ (function () {
     return Extractor;
 }());
 
-},{}],11:[function(require,module,exports){
+},{"../compression/DataType":7}],11:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -4296,12 +4384,17 @@ var Reducer = /** @class */ (function () {
             var token = _a[1];
             return hashToIndex[token.nameToken.hash];
         });
-        //  save all files separately
+        //  save all files separately as complex objects.
         var dataTokens = fileEntries.map(function (_a) {
-            var file = _a[0], root = _a[1].token;
+            var root = _a[1].token;
             var subHashToIndex = __assign({}, hashToIndex);
-            var tokens = Object.values(header.registry).filter(function (token) { return token.files.has(file) && token !== root; });
-            return _this.createReducedTokens(tokens, subHashToIndex, headerTokens.length).concat(_this.createReducedTokens([root], subHashToIndex, headerTokens.length));
+            var structure = [];
+            var result = [{
+                    type: "complex",
+                    value: structure
+                }];
+            _this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
+            return result;
         });
         return {
             originalDataSize: header.originalDataSize,
@@ -4390,29 +4483,29 @@ var Reducer = /** @class */ (function () {
      * @param hashToIndex Hash to index mapping
      * @param result Resulting set of tokens
      */
-    Reducer.prototype.createComplexObject = function (token, hashToIndex, registry, result) {
+    Reducer.prototype.createComplexObject = function (token, hashToIndex, registry, headerTokens, structure, resultDataTokens) {
         var _this = this;
-        var _a;
+        var _a, _b;
         if (hashToIndex[token.hash] >= 0) {
-            result.push({ type: "reference", value: hashToIndex[token.hash] });
+            structure.push(DataType_1.StructureType.LEAF);
+            resultDataTokens.push({ type: "reference", value: hashToIndex[token.hash] });
         }
         else if (token.type === "leaf") {
-            if (token.count > 1) {
-                var index = result.length;
-                hashToIndex[token.hash] = index;
-            }
-            result.push({ type: token.type, value: token.value });
+            structure.push(this.dataTypeUtils.typeToStructureType(token.type));
+            hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
+            resultDataTokens.push({ type: token.type, value: token.value });
         }
         else if (token.type === "split" || token.type === "object" || token.type === "array") {
-            if (token.count > 1) {
-                var index = result.length;
-                hashToIndex[token.hash] = index;
+            structure.push(this.dataTypeUtils.typeToStructureType(token.type));
+            if (token.type === "array") {
+                resultDataTokens.push({ type: "leaf", value: (_a = token.reference) === null || _a === void 0 ? void 0 : _a.length });
             }
-            result.push({ type: token.type, value: undefined });
-            var subTokens = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return registry[hash]; });
+            var subTokens = (_b = token.reference) === null || _b === void 0 ? void 0 : _b.map(function (hash) { return registry[hash]; });
             subTokens === null || subTokens === void 0 ? void 0 : subTokens.forEach(function (token) {
-                _this.createComplexObject(token, hashToIndex, registry, result);
+                _this.createComplexObject(token, hashToIndex, registry, headerTokens, structure, resultDataTokens);
             });
+            // hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
+            // resultDataTokens.push({ type: token.type, value: token.value });
         }
         else {
             throw new Error("Invalid token type");

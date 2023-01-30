@@ -3,13 +3,11 @@ import { ReducedToken, Type } from "../tokenizer/Token";
 /**
  * Configuration that can be passed.
  * - cacheable: We can use cache to boost extraction speed. This uses a bit more memory.
- * - allowReferences: within the extracted object, multiple nodes can reference the same object.
  * This helps performance and memory, but can lead to weird side effects if the extracted object
  * gets modified.
  */
 export interface ExtractionConfig {
     cacheable: boolean;
-    allowReferences: boolean;
 }
 /**
  * Class storing all data that can be extracted.
@@ -28,12 +26,9 @@ export default class ExtractableData {
      * Extract data form a stored file.
      *
      * @param filename filename to be extracted.
-     * @param allowReferences If true, within the extracted object, multiple nodes can reference the same object.
-     *  This helps performance and memory, but can lead to weird side effects if the extracted object
-     *  gets modified.
      * @returns extracted data.
      */
-    extract(filename: string, allowReferences?: boolean): any;
+    extract(filename: string): any;
     getHeaderTokens(): ReducedToken[];
 }
 declare class Extractor {
@@ -41,7 +36,9 @@ declare class Extractor {
     constructor();
     extractFileNames(files: number[], headerTokens: ReducedToken[], config: ExtractionConfig): any[];
     extract(headerTokens: ReducedToken[], dataTokens: ReducedToken[], config: ExtractionConfig): any;
+    private extractComplex;
     private extractToken;
+    private getLeaf;
     private getReference;
     private getArray;
     private getObject;

@@ -1,6 +1,6 @@
 import Token, { Hash, ReducedToken } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
-import { DataTypeUtils } from "../compression/DataType";
+import { DataTypeUtils, StructureType } from "../compression/DataType";
 /**
  * Stores all information needed to extract data.
  *
@@ -46,5 +46,5 @@ export default class Reducer {
      * @param hashToIndex Hash to index mapping
      * @param result Resulting set of tokens
      */
-    createComplexObject(token: Token, hashToIndex: Record<Hash, number>, registry: Record<Hash, Token>, result: ReducedToken[]): void;
+    createComplexObject(token: Token, hashToIndex: Record<Hash, number>, registry: Record<Hash, Token>, headerTokens: ReducedToken[], structure: StructureType[], resultDataTokens: ReducedToken[]): void;
 }

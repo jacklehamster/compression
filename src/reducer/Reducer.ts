@@ -1,6 +1,6 @@
-import Token, { Hash, ReducedToken, StoredToken } from "../tokenizer/Token";
+import Token, { Hash, ReducedToken, StoredToken, Type } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
-import { DataType, DataTypeUtils } from "../compression/DataType";
+import { DataType, DataTypeUtils, StructureType } from "../compression/DataType";
 
 /**
  * Stores all information needed to extract data.
@@ -47,11 +47,16 @@ export default class Reducer {
         const fileEntries = Object.entries(header.files).sort(([name1], [name2]) => name1.localeCompare(name2));
         const files = fileEntries.map(([,token]) => hashToIndex[token.nameToken.hash]);
 
-        //  save all files separately
-        const dataTokens = fileEntries.map(([file, {token: root}]) => {
+        //  save all files separately as complex objects.
+        const dataTokens = fileEntries.map(([, {token: root}]) => {
             const subHashToIndex = {...hashToIndex};
-            const tokens = Object.values(header.registry).filter(token => token.files.has(file) && token !== root);
-            return this.createReducedTokens(tokens, subHashToIndex, headerTokens.length).concat(this.createReducedTokens([root], subHashToIndex, headerTokens.length));
+            const structure: StructureType[] = [];
+            const result: ReducedToken[] = [{
+                    type: "complex",
+                    value: structure,
+            }];
+            this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
+            return result;
         });
 
         return {
@@ -142,25 +147,25 @@ export default class Reducer {
      * @param hashToIndex Hash to index mapping
      * @param result Resulting set of tokens
      */
-    createComplexObject(token: Token, hashToIndex: Record<Hash, number>, registry: Record<Hash, Token>, result: ReducedToken[]): void {
+    createComplexObject(token: Token, hashToIndex: Record<Hash, number>, registry: Record<Hash, Token>, headerTokens: ReducedToken[], structure: StructureType[], resultDataTokens: ReducedToken[]): void {
         if (hashToIndex[token.hash] >= 0) {
-            result.push({ type: "reference", value: hashToIndex[token.hash] });
+            structure.push(StructureType.LEAF);
+            resultDataTokens.push({ type: "reference", value: hashToIndex[token.hash] });
         } else if (token.type === "leaf") {
-            if (token.count > 1) {
-                const index = result.length;
-                hashToIndex[token.hash] = index;
-            }
-            result.push({ type: token.type, value: token.value });
+            structure.push(this.dataTypeUtils.typeToStructureType(token.type));
+            hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
+            resultDataTokens.push({ type: token.type, value: token.value });
         } else if (token.type === "split" || token.type === "object" || token.type === "array") {
-            if (token.count > 1) {
-                const index = result.length;
-                hashToIndex[token.hash] = index;
+            structure.push(this.dataTypeUtils.typeToStructureType(token.type));
+            if (token.type === "array") {
+                resultDataTokens.push({ type: "leaf", value: token.reference?.length });
             }
-            result.push({ type: token.type, value: undefined });
             const subTokens = token.reference?.map((hash) => registry[hash]);
             subTokens?.forEach(token => {
-                this.createComplexObject(token, hashToIndex, registry, result);
+                this.createComplexObject(token, hashToIndex, registry, headerTokens, structure, resultDataTokens);
             });
+            // hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
+            // resultDataTokens.push({ type: token.type, value: token.value });
         } else {
             throw new Error("Invalid token type");
         }

@@ -1,4 +1,4 @@
-//18033
+//13578
 import { StreamDataView } from "stream-data-view";
 import { ReducedToken } from "../tokenizer/Token";
 import { DataType, DataTypeUtils } from "./DataType";
@@ -6,6 +6,7 @@ import { DataType, DataTypeUtils } from "./DataType";
 type Tester = (encoder: TokenEncoder, decoder: TokenEncoder, reset: () => void) => void;
 
 interface MultiInfo {
+    organized: boolean;
     lastStringLength?: number;
 }
 
@@ -17,21 +18,21 @@ export default class TokenEncoder {
         this.streamDataView = streamDataView;
     }
 
-    encodeTokens(tokens: ReducedToken[]) {
+    encodeTokens(tokens: ReducedToken[], organized: boolean) {
         let pos = 0;
         while (pos < tokens.length) {
-            const count = this.encodeMulti(tokens, pos);
+            const count = this.encodeMulti(tokens, pos, organized);
             if (count) {
                 pos += count;
             }
         }
-        this.encodeMulti([], pos);
+        this.encodeMulti([], pos, organized);
     }
 
-    decodeTokens() {
+    decodeTokens(organized: boolean) {
         const tokens:  ReducedToken[] = [];
         while(this.streamDataView.getOffset() < this.streamDataView.getLength()) {
-            if (!this.decodeMulti(tokens)) {
+            if (!this.decodeMulti(tokens, organized)) {
                 break;
             }
         }
@@ -84,6 +85,9 @@ export default class TokenEncoder {
             case DataType.REFERENCE_32:
                 this.encodeReferenceToken(token, usedDataType);
                 break;
+            case DataType.COMPLEX_OBJECT:
+                this.encodeComplexToken(token, usedDataType);
+                break;
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
             }
@@ -110,7 +114,7 @@ export default class TokenEncoder {
             case DataType.UINT32:
             case DataType.FLOAT32:
             case DataType.FLOAT64:
-                        return { type: "leaf", value: this.decodeSingleNumber(usedDataType) };
+                return { type: "leaf", value: this.decodeSingleNumber(usedDataType) };
             case DataType.STRING:
             case DataType.UNICODE:
                 return { type: "leaf", value: this.decodeString(usedDataType, multiInfo) };
@@ -129,6 +133,12 @@ export default class TokenEncoder {
             case DataType.OFFSET_ARRAY_16:
             case DataType.OFFSET_ARRAY_32:
                 return this.decodeArrayToken(usedDataType);
+            case DataType.REFERENCE_8:
+            case DataType.REFERENCE_16:
+            case DataType.REFERENCE_32:
+                return this.decodeReferenceToken(usedDataType);
+            case DataType.COMPLEX_OBJECT:
+                return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
         }
@@ -225,16 +235,33 @@ export default class TokenEncoder {
         };
     }
 
+    encodeComplexToken(token: ReducedToken, dataType?: DataType) {
+        if (dataType === undefined) {
+            this.encodeDataType(this.dataTypeUtils.getDataType(token));
+        }
+        this.encodeNumberArray(token.value, DataType.UINT8);
+    }
+
+    decodeComplexToken(dataType?: DataType): ReducedToken {
+        const usedDataType = dataType ?? this.decodeDataType();
+        const structure = this.decodeNumberArray(DataType.UINT8);
+        return {
+            type: this.dataTypeUtils.dataTypeToType(usedDataType),
+            value: structure,
+        };
+    }
+
     encodeDataType(dataType: DataType): DataType {
         this.streamDataView.setNextUint8(dataType);
         return dataType;
     }
 
     decodeDataType(): DataType {
-        return this.streamDataView.getNextUint8();
+        const dataType = this.streamDataView.getNextUint8();
+        return dataType;
     }
 
-    encodeMulti(tokens: ReducedToken[], pos: number): number {
+    encodeMulti(tokens: ReducedToken[], pos: number, organized: boolean): number {
         if (pos >= tokens.length) {
             this.encodeSingleNumber(0, DataType.UINT8);
             return 0;
@@ -250,20 +277,20 @@ export default class TokenEncoder {
         //  encode a multi, meaning that the same type is going to get repeated multiple times
         this.encodeSingleNumber(multiCount, DataType.UINT8);
         this.encodeDataType(firstType);
-        const multiInfo: MultiInfo = {};
+        const multiInfo: MultiInfo = { organized };
         for (let i = 0; i < multiCount; i++) {
             this.encodeToken(tokens[pos + i], firstType, multiInfo);
         }
         return multiCount;
     }
 
-    decodeMulti(tokens: ReducedToken[]): number {
+    decodeMulti(tokens: ReducedToken[], organized: boolean): number {
         const count = this.streamDataView.getNextUint8();
         if (!count) {
             return 0;
         }
         const dataType = this.decodeDataType();
-        const multiInfo: MultiInfo = {};
+        const multiInfo: MultiInfo = { organized };
         for (let i = 0; i < count; i++) {
             const token = this.decodeToken(dataType, multiInfo);
             tokens.push(token);
@@ -373,7 +400,7 @@ export default class TokenEncoder {
     encodeString(value: string, dataType?: DataType, multiInfo?: MultiInfo): void {
         const letterCodes = value.split("").map(l => l.charCodeAt(0));
         // const min = Math.min(...letterCodes);
-        if (!multiInfo || multiInfo.lastStringLength !== value.length) {
+        if (!multiInfo?.organized || multiInfo.lastStringLength !== value.length) {
             letterCodes.push(0);
         }
         // console.log(letterCodes, value, (letterCodes).map((value) => !value ? 0 : value - min + 1));
@@ -395,7 +422,7 @@ export default class TokenEncoder {
                 break;
             }
             charCodes.push(code);
-            if (multiInfo?.lastStringLength && charCodes.length >= multiInfo?.lastStringLength) {
+            if (multiInfo?.organized && multiInfo?.lastStringLength && charCodes.length >= multiInfo?.lastStringLength) {
                 break;
             }
         } while(true);
@@ -436,11 +463,11 @@ export default class TokenEncoder {
                         { type: "leaf", value: 67 },
                         { type: "leaf", value: 89 },
                     ],
-                    header => tokenEncoder.encodeMulti(header, 0),
+                    header => tokenEncoder.encodeMulti(header, 0, false),
                     reset,
                     () => {
                         const result: ReducedToken[] = [];
-                        tokenDecoder.decodeMulti(result);
+                        tokenDecoder.decodeMulti(result, false);
                         return result;
                     });
             },
@@ -450,11 +477,11 @@ export default class TokenEncoder {
                         { type: "leaf", value: 1002000 },
                         { type: "leaf", value: 1003001 },
                     ],
-                    header => tokenEncoder.encodeMulti(header, 0),
+                    header => tokenEncoder.encodeMulti(header, 0, false),
                     reset,
                     () => {
                         const result: ReducedToken[] = [];
-                        tokenDecoder.decodeMulti(result);
+                        tokenDecoder.decodeMulti(result, false);
                         return result;
                     });                
             },
@@ -591,9 +618,9 @@ export default class TokenEncoder {
                     };
                     return token;
                 }),
-                    o => tokenEncoder.encodeTokens(o),
+                    o => tokenEncoder.encodeTokens(o, false),
                     reset,
-                    () => tokenDecoder.decodeTokens());
+                    () => tokenDecoder.decodeTokens(false));
             },
             (tokenEncoder, tokenDecoder, reset) => {
                 this.testAction(new Array(260).fill(null).map((_,index) => {
@@ -603,9 +630,9 @@ export default class TokenEncoder {
                     };
                     return token;
                 }),
-                    o => tokenEncoder.encodeTokens(o),
+                    o => tokenEncoder.encodeTokens(o, false),
                     reset,
-                    () => tokenDecoder.decodeTokens());
+                    () => tokenDecoder.decodeTokens(false));
             },
             (tokenEncoder, tokenDecoder, reset) => {
                 this.testAction(new Array(260).fill(null).map((_,index) => {
@@ -615,9 +642,15 @@ export default class TokenEncoder {
                     };
                     return token;
                 }),
-                    o => tokenEncoder.encodeTokens(o),
+                    o => tokenEncoder.encodeTokens(o, false),
                     reset,
-                    () => tokenDecoder.decodeTokens());
+                    () => tokenDecoder.decodeTokens(false));
+            },
+            (tokenEncoder, tokenDecoder, reset) => {
+                this.testAction({ type: "complex", value: [1, 2, 3, 2, 1, 2, 1, 0] },
+                    o => tokenEncoder.encodeToken(o),
+                    reset,
+                    () => tokenDecoder.decodeToken());
             },
         ];
 

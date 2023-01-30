@@ -1,4 +1,10 @@
 import Token, { StoredToken, Type } from "../tokenizer/Token";
+export declare enum StructureType {
+    LEAF = 0,
+    ARRAY = 1,
+    OBJECT = 2,
+    SPLIT = 3
+}
 export declare enum DataType {
     UNDEFINED = 0,
     NULL = 1,
@@ -41,4 +47,5 @@ export declare class DataTypeUtils {
     getFullTokenDataType(token: Token): DataType;
     getDataType(token: StoredToken): DataType;
     dataTypeToType(dataType: DataType): Type;
+    typeToStructureType(type: Type): StructureType;
 }

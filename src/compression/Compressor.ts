@@ -81,7 +81,7 @@ export default class Compressor {
         const tokenEncoder: TokenEncoder = new TokenEncoder(streamDataView);
 
         //  Write header tokens
-        tokenEncoder.encodeTokens(dataStore.headerTokens);
+        tokenEncoder.encodeTokens(dataStore.headerTokens, true);
         //  Write fileNames
         tokenEncoder.encodeNumberArray(dataStore.files);
 
@@ -108,7 +108,7 @@ export default class Compressor {
         for (let index = 0; index < dataStore.files.length; index++) {
             const subStream = new StreamDataView();
             const subEncoder = new TokenEncoder(subStream);
-            subEncoder.encodeTokens(dataStore.getDataTokens(index)!);
+            subEncoder.encodeTokens(dataStore.getDataTokens(index)!, false);
 
             //  save and compress buffer
             const subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
@@ -145,7 +145,7 @@ export default class Compressor {
         const headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
 
         const headerTokenEncoder = new TokenEncoder(new StreamDataView(headerBuffer));
-        const headerTokens = headerTokenEncoder.decodeTokens();
+        const headerTokens = headerTokenEncoder.decodeTokens(true);
         const files = headerTokenEncoder.decodeNumberArray();
 
         const subBuffers: ArrayBuffer[] = [];
@@ -161,7 +161,7 @@ export default class Compressor {
             const subBuffer = this.applyDecoders(subBuffers[index], decoders);
             const streamDataView = new StreamDataView(subBuffer);
             const tokenDecoder = new TokenEncoder(streamDataView);
-            return tokenDecoder.decodeTokens();
+            return tokenDecoder.decodeTokens(false);
         }
 
         //  The remaining from streamDataView is extra. Some compressed data don't have it.
