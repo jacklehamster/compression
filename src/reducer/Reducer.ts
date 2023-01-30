@@ -22,14 +22,7 @@ export interface DataStore {
  * Reduce header from using large tokens to reduce tokens.
  */
 export default class Reducer {
-    debug: boolean;
     dataTypeUtils: DataTypeUtils = new DataTypeUtils();
-    bitLevel?: boolean;
-
-    constructor(debug?: boolean, bitLevel?: boolean) {
-        this.debug = debug ?? false;
-        this.bitLevel = bitLevel;
-    }
 
     /**
      * Reduce header with smaller tokens for storage
@@ -56,7 +49,6 @@ export default class Reducer {
             const result: ReducedToken[] = [{
                     type: "complex",
                     value: structure,
-                    bitLevel: this.bitLevel,
             }];
             this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
             return result;
@@ -140,7 +132,6 @@ export default class Reducer {
         return organizedTokens.map(token => ({
             type: token.type,
             value: token.reference?.map(hash => hashToIndex[hash]) ?? token.value,
-            ...this.debug ? { debug: token.value } : {},
         }));
     }
 
@@ -167,8 +158,6 @@ export default class Reducer {
             subTokens?.forEach(token => {
                 this.createComplexObject(token, hashToIndex, registry, headerTokens, structure, resultDataTokens);
             });
-            // hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
-            // resultDataTokens.push({ type: token.type, value: token.value });
         } else {
             throw new Error("Invalid token type");
         }

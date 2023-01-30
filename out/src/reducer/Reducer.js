@@ -16,10 +16,8 @@ var DataType_1 = require("../compression/DataType");
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
-    function Reducer(debug, bitLevel) {
+    function Reducer() {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
-        this.debug = debug !== null && debug !== void 0 ? debug : false;
-        this.bitLevel = bitLevel;
     }
     /**
      * Reduce header with smaller tokens for storage
@@ -50,8 +48,7 @@ var Reducer = /** @class */ (function () {
             var structure = [];
             var result = [{
                     type: "complex",
-                    value: structure,
-                    bitLevel: _this.bitLevel
+                    value: structure
                 }];
             _this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
             return result;
@@ -124,7 +121,6 @@ var Reducer = /** @class */ (function () {
         return resultTokens;
     };
     Reducer.prototype.createReducedTokens = function (tokens, hashToIndex, offset) {
-        var _this = this;
         if (offset === void 0) { offset = 0; }
         this.sortTokens(tokens);
         var organizedTokens = this.organizeTokens(tokens);
@@ -134,7 +130,10 @@ var Reducer = /** @class */ (function () {
         });
         return organizedTokens.map(function (token) {
             var _a, _b;
-            return (__assign({ type: token.type, value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value }, _this.debug ? { debug: token.value } : {}));
+            return ({
+                type: token.type,
+                value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value
+            });
         });
     };
     /**
@@ -164,8 +163,6 @@ var Reducer = /** @class */ (function () {
             subTokens === null || subTokens === void 0 ? void 0 : subTokens.forEach(function (token) {
                 _this.createComplexObject(token, hashToIndex, registry, headerTokens, structure, resultDataTokens);
             });
-            // hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
-            // resultDataTokens.push({ type: token.type, value: token.value });
         }
         else {
             throw new Error("Invalid token type");

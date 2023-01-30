@@ -77,7 +77,6 @@ var TokenEncoder = /** @class */ (function () {
                 this.encodeReferenceToken(token, usedDataType);
                 break;
             case DataType_1.DataType.COMPLEX_OBJECT:
-            case DataType_1.DataType.COMPLEX_OBJECT_2:
                 this.encodeComplexToken(token, usedDataType);
                 break;
             default:
@@ -131,7 +130,6 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.REFERENCE_32:
                 return this.decodeReferenceToken(usedDataType);
             case DataType_1.DataType.COMPLEX_OBJECT:
-            case DataType_1.DataType.COMPLEX_OBJECT_2:
                 return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
@@ -219,35 +217,24 @@ var TokenEncoder = /** @class */ (function () {
         if (dataType === undefined) {
             this.encodeDataType(this.dataTypeUtils.getDataType(token));
         }
-        if (dataType !== DataType_1.DataType.COMPLEX_OBJECT_2) {
-            this.encodeNumberArray(token.value, DataType_1.DataType.UINT8);
+        var structure = token.value;
+        var bytes = [];
+        for (var i = 0; i < structure.length; i += 4) {
+            bytes.push(this.bit2num(structure.slice(i, i + 4)));
         }
-        else {
-            var structure = token.value;
-            var bytes = [];
-            for (var i = 0; i < structure.length; i += 4) {
-                bytes.push(this.bit2num(structure.slice(i, i + 4)));
-            }
-            this.encodeNumberArray(bytes, DataType_1.DataType.UINT8);
-            this.encodeSingleNumber(structure.length);
-        }
+        this.encodeNumberArray(bytes, DataType_1.DataType.UINT8);
+        this.encodeSingleNumber(structure.length - bytes.length * 4, DataType_1.DataType.INT8);
     };
     TokenEncoder.prototype.decodeComplexToken = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        var structure;
-        if (dataType !== DataType_1.DataType.COMPLEX_OBJECT_2) {
-            structure = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        var structure = [];
+        var bytes = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        for (var _i = 0, bytes_1 = bytes; _i < bytes_1.length; _i++) {
+            var byte = bytes_1[_i];
+            structure.push.apply(structure, this.num2bit(byte));
         }
-        else {
-            var bytes = this.decodeNumberArray(DataType_1.DataType.UINT8);
-            structure = [];
-            for (var _i = 0, bytes_1 = bytes; _i < bytes_1.length; _i++) {
-                var byte = bytes_1[_i];
-                structure.push.apply(structure, this.num2bit(byte));
-            }
-            var size = this.decodeSingleNumber();
-            structure = structure.slice(0, size);
-        }
+        var sizeDiff = this.decodeSingleNumber(DataType_1.DataType.INT8);
+        structure.length += sizeDiff;
         return {
             type: this.dataTypeUtils.dataTypeToType(usedDataType),
             value: structure

@@ -20,10 +20,7 @@ export interface DataStore {
  * Reduce header from using large tokens to reduce tokens.
  */
 export default class Reducer {
-    debug: boolean;
     dataTypeUtils: DataTypeUtils;
-    bitLevel?: boolean;
-    constructor(debug?: boolean, bitLevel?: boolean);
     /**
      * Reduce header with smaller tokens for storage
      *

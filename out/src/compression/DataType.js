@@ -43,7 +43,6 @@ var DataType;
     DataType[DataType["REFERENCE_32"] = 32] = "REFERENCE_32";
     DataType[DataType["COMPLEX_OBJECT"] = 33] = "COMPLEX_OBJECT";
     DataType[DataType["UINT2"] = 34] = "UINT2";
-    DataType[DataType["COMPLEX_OBJECT_2"] = 35] = "COMPLEX_OBJECT_2";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -138,7 +137,7 @@ var DataTypeUtils = /** @class */ (function () {
     DataTypeUtils.prototype.getDataType = function (token) {
         switch (token.type) {
             case "complex":
-                return token.bitLevel ? DataType.COMPLEX_OBJECT_2 : DataType.COMPLEX_OBJECT;
+                return DataType.COMPLEX_OBJECT;
             case "array":
             case "object":
             case "split":
@@ -219,7 +218,6 @@ var DataTypeUtils = /** @class */ (function () {
     };
     DataTypeUtils.prototype.dataTypeToType = function (dataType) {
         switch (dataType) {
-            case DataType.COMPLEX_OBJECT_2:
             case DataType.COMPLEX_OBJECT:
                 return "complex";
             case DataType.EMPTY_ARRAY:

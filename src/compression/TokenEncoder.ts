@@ -90,7 +90,6 @@ export default class TokenEncoder {
                 this.encodeReferenceToken(token, usedDataType);
                 break;
             case DataType.COMPLEX_OBJECT:
-            case DataType.COMPLEX_OBJECT_2:
                 this.encodeComplexToken(token, usedDataType);
                 break;
             default:
@@ -145,7 +144,6 @@ export default class TokenEncoder {
             case DataType.REFERENCE_32:
                 return this.decodeReferenceToken(usedDataType);
             case DataType.COMPLEX_OBJECT:
-            case DataType.COMPLEX_OBJECT_2:
                     return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
@@ -247,33 +245,24 @@ export default class TokenEncoder {
         if (dataType === undefined) {
             this.encodeDataType(this.dataTypeUtils.getDataType(token));
         }
-        if (dataType !== DataType.COMPLEX_OBJECT_2) {
-            this.encodeNumberArray(token.value, DataType.UINT8);
-        } else {
-            const structure = token.value;
-            const bytes = [];
-            for (let i = 0; i < structure.length; i += 4) {
-                bytes.push(this.bit2num(structure.slice(i, i + 4)));
-            }
-            this.encodeNumberArray(bytes, DataType.UINT8);
-            this.encodeSingleNumber(structure.length);
+        const structure = token.value;
+        const bytes = [];
+        for (let i = 0; i < structure.length; i += 4) {
+            bytes.push(this.bit2num(structure.slice(i, i + 4)));
         }
+        this.encodeNumberArray(bytes, DataType.UINT8);
+        this.encodeSingleNumber(structure.length - bytes.length * 4, DataType.INT8);
     }
 
     decodeComplexToken(dataType?: DataType): ReducedToken {
         const usedDataType = dataType ?? this.decodeDataType();
-        let structure;
-        if (dataType !== DataType.COMPLEX_OBJECT_2) {
-            structure = this.decodeNumberArray(DataType.UINT8);
-        } else {
-            const bytes = this.decodeNumberArray(DataType.UINT8);
-            structure = [];
-            for (let byte of bytes) {
-                structure.push(...this.num2bit(byte));
-            }
-            const size = this.decodeSingleNumber();
-            structure = structure.slice(0, size);
+        const structure = [];
+        const bytes = this.decodeNumberArray(DataType.UINT8);
+        for (let byte of bytes) {
+            structure.push(...this.num2bit(byte));
         }
+        const sizeDiff = this.decodeSingleNumber(DataType.INT8);
+        structure.length += sizeDiff;
         return {
             type: this.dataTypeUtils.dataTypeToType(usedDataType),
             value: structure,

@@ -58,7 +58,7 @@
         const originalData = await Promise.all(files.map(loader.load));
 
         // //  compress
-        const compressor = new Compressor(true);
+        const compressor = new Compressor();
         let time = performance.now();
         compressedBuffer = compressor.compress(Object.fromEntries(originalData.map((data, index) => [files[index], data])));
         console.log("Time to compress: %s", performance.now() - time);
@@ -87,18 +87,18 @@
         const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json");
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
 
-        // try {
-        //  const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
-        //  const turtleData = eTest.extract("games/turtle/turtle.json", true);
-        //  console.log("Version", eTest.version);
-        //  console.log("Number of files stored:", eTest.fileNames.length);
-        //  console.log("Turtle data", turtleData);
-        //  console.log("Original data size", eTest.originalDataSize);
-        //  console.log("Compressed size", eTest.compressedSize);
-        //  console.log(eTest.getHeaderTokens());
-        // } catch (e) {
-        //   console.error(e.message);
-        // }
+        try {
+         const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
+         const turtleData = eTest.extract("games/turtle/turtle.json", true);
+         console.log("Version", eTest.version);
+         console.log("Number of files stored:", eTest.fileNames.length);
+         console.log("Turtle data", turtleData);
+         console.log("Original data size", eTest.originalDataSize);
+         console.log("Compressed size", eTest.compressedSize);
+         console.log(eTest.getHeaderTokens());
+        } catch (e) {
+          console.error(e.message);
+        }
       });
     </script>
 

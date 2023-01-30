@@ -18,13 +18,11 @@ export default interface Token extends StoredToken {
 export interface StoredToken {
     type: Type;
     value: any;
-    bitLevel?: boolean;
 }
 /**
  * Stored token with added debug field for easier debugging, and cache for extraction optimization.
  */
 export interface ReducedToken extends StoredToken {
-    debug?: any;
     cache?: any;
 }
 /**

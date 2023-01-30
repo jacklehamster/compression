@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.20",
+    "version": "1.0.21",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3084,8 +3084,7 @@ var ENCODERS = [
 ];
 var DEFAULT = [EncoderEnum.FFLATE];
 var Compressor = /** @class */ (function () {
-    function Compressor(bitLevel) {
-        this.bitLevel = bitLevel;
+    function Compressor() {
     }
     Compressor.prototype.applyEncoders = function (buffer, encoders) {
         var resultBuffer = buffer;
@@ -3117,7 +3116,7 @@ var Compressor = /** @class */ (function () {
                         return [4 /*yield*/, tokenizer.load.apply(tokenizer, files)];
                     case 1:
                         header = _a.sent();
-                        reducer = new Reducer_1["default"](false, this.bitLevel);
+                        reducer = new Reducer_1["default"]();
                         dataStore = reducer.reduce(header);
                         return [2 /*return*/, this.compressDataStore(dataStore)];
                 }
@@ -3133,7 +3132,7 @@ var Compressor = /** @class */ (function () {
     Compressor.prototype.compress = function (data) {
         var tokenizer = new Tokenizer_1["default"]();
         var header = tokenizer.tokenize(data);
-        var reducer = new Reducer_1["default"](false, this.bitLevel);
+        var reducer = new Reducer_1["default"]();
         var dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     };
@@ -3298,7 +3297,6 @@ var DataType;
     DataType[DataType["REFERENCE_32"] = 32] = "REFERENCE_32";
     DataType[DataType["COMPLEX_OBJECT"] = 33] = "COMPLEX_OBJECT";
     DataType[DataType["UINT2"] = 34] = "UINT2";
-    DataType[DataType["COMPLEX_OBJECT_2"] = 35] = "COMPLEX_OBJECT_2";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -3393,7 +3391,7 @@ var DataTypeUtils = /** @class */ (function () {
     DataTypeUtils.prototype.getDataType = function (token) {
         switch (token.type) {
             case "complex":
-                return token.bitLevel ? DataType.COMPLEX_OBJECT_2 : DataType.COMPLEX_OBJECT;
+                return DataType.COMPLEX_OBJECT;
             case "array":
             case "object":
             case "split":
@@ -3474,7 +3472,6 @@ var DataTypeUtils = /** @class */ (function () {
     };
     DataTypeUtils.prototype.dataTypeToType = function (dataType) {
         switch (dataType) {
-            case DataType.COMPLEX_OBJECT_2:
             case DataType.COMPLEX_OBJECT:
                 return "complex";
             case DataType.EMPTY_ARRAY:
@@ -3635,7 +3632,6 @@ var TokenEncoder = /** @class */ (function () {
                 this.encodeReferenceToken(token, usedDataType);
                 break;
             case DataType_1.DataType.COMPLEX_OBJECT:
-            case DataType_1.DataType.COMPLEX_OBJECT_2:
                 this.encodeComplexToken(token, usedDataType);
                 break;
             default:
@@ -3689,7 +3685,6 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.REFERENCE_32:
                 return this.decodeReferenceToken(usedDataType);
             case DataType_1.DataType.COMPLEX_OBJECT:
-            case DataType_1.DataType.COMPLEX_OBJECT_2:
                 return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
@@ -3777,35 +3772,24 @@ var TokenEncoder = /** @class */ (function () {
         if (dataType === undefined) {
             this.encodeDataType(this.dataTypeUtils.getDataType(token));
         }
-        if (dataType !== DataType_1.DataType.COMPLEX_OBJECT_2) {
-            this.encodeNumberArray(token.value, DataType_1.DataType.UINT8);
+        var structure = token.value;
+        var bytes = [];
+        for (var i = 0; i < structure.length; i += 4) {
+            bytes.push(this.bit2num(structure.slice(i, i + 4)));
         }
-        else {
-            var structure = token.value;
-            var bytes = [];
-            for (var i = 0; i < structure.length; i += 4) {
-                bytes.push(this.bit2num(structure.slice(i, i + 4)));
-            }
-            this.encodeNumberArray(bytes, DataType_1.DataType.UINT8);
-            this.encodeSingleNumber(structure.length);
-        }
+        this.encodeNumberArray(bytes, DataType_1.DataType.UINT8);
+        this.encodeSingleNumber(structure.length - bytes.length * 4, DataType_1.DataType.INT8);
     };
     TokenEncoder.prototype.decodeComplexToken = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        var structure;
-        if (dataType !== DataType_1.DataType.COMPLEX_OBJECT_2) {
-            structure = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        var structure = [];
+        var bytes = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        for (var _i = 0, bytes_1 = bytes; _i < bytes_1.length; _i++) {
+            var byte = bytes_1[_i];
+            structure.push.apply(structure, this.num2bit(byte));
         }
-        else {
-            var bytes = this.decodeNumberArray(DataType_1.DataType.UINT8);
-            structure = [];
-            for (var _i = 0, bytes_1 = bytes; _i < bytes_1.length; _i++) {
-                var byte = bytes_1[_i];
-                structure.push.apply(structure, this.num2bit(byte));
-            }
-            var size = this.decodeSingleNumber();
-            structure = structure.slice(0, size);
-        }
+        var sizeDiff = this.decodeSingleNumber(DataType_1.DataType.INT8);
+        structure.length += sizeDiff;
         return {
             type: this.dataTypeUtils.dataTypeToType(usedDataType),
             value: structure
@@ -4418,10 +4402,8 @@ var DataType_1 = require("../compression/DataType");
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
-    function Reducer(debug, bitLevel) {
+    function Reducer() {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
-        this.debug = debug !== null && debug !== void 0 ? debug : false;
-        this.bitLevel = bitLevel;
     }
     /**
      * Reduce header with smaller tokens for storage
@@ -4452,8 +4434,7 @@ var Reducer = /** @class */ (function () {
             var structure = [];
             var result = [{
                     type: "complex",
-                    value: structure,
-                    bitLevel: _this.bitLevel
+                    value: structure
                 }];
             _this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
             return result;
@@ -4526,7 +4507,6 @@ var Reducer = /** @class */ (function () {
         return resultTokens;
     };
     Reducer.prototype.createReducedTokens = function (tokens, hashToIndex, offset) {
-        var _this = this;
         if (offset === void 0) { offset = 0; }
         this.sortTokens(tokens);
         var organizedTokens = this.organizeTokens(tokens);
@@ -4536,7 +4516,10 @@ var Reducer = /** @class */ (function () {
         });
         return organizedTokens.map(function (token) {
             var _a, _b;
-            return (__assign({ type: token.type, value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value }, _this.debug ? { debug: token.value } : {}));
+            return ({
+                type: token.type,
+                value: (_b = (_a = token.reference) === null || _a === void 0 ? void 0 : _a.map(function (hash) { return hashToIndex[hash]; })) !== null && _b !== void 0 ? _b : token.value
+            });
         });
     };
     /**
@@ -4566,8 +4549,6 @@ var Reducer = /** @class */ (function () {
             subTokens === null || subTokens === void 0 ? void 0 : subTokens.forEach(function (token) {
                 _this.createComplexObject(token, hashToIndex, registry, headerTokens, structure, resultDataTokens);
             });
-            // hashToIndex[token.hash] = headerTokens.length + resultDataTokens.length;
-            // resultDataTokens.push({ type: token.type, value: token.value });
         }
         else {
             throw new Error("Invalid token type");
