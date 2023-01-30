@@ -3,6 +3,7 @@ exports.__esModule = true;
 //13578
 var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
+var MAX_ARRAY_SIZE = 255;
 var TokenEncoder = /** @class */ (function () {
     function TokenEncoder(streamDataView) {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
@@ -36,6 +37,8 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.BOOLEAN_FALSE:
             case DataType_1.DataType.EMPTY_ARRAY:
                 break;
+            case DataType_1.DataType.UINT2:
+                throw new Error("Invalid data type");
             case DataType_1.DataType.INT8:
             case DataType_1.DataType.UINT8:
             case DataType_1.DataType.INT16:
@@ -74,6 +77,7 @@ var TokenEncoder = /** @class */ (function () {
                 this.encodeReferenceToken(token, usedDataType);
                 break;
             case DataType_1.DataType.COMPLEX_OBJECT:
+            case DataType_1.DataType.COMPLEX_OBJECT_2:
                 this.encodeComplexToken(token, usedDataType);
                 break;
             default:
@@ -93,6 +97,8 @@ var TokenEncoder = /** @class */ (function () {
                 return { type: "leaf", value: false };
             case DataType_1.DataType.EMPTY_ARRAY:
                 return { type: "array", value: [] };
+            case DataType_1.DataType.UINT2:
+                throw new Error("Use decode number array.");
             case DataType_1.DataType.INT8:
             case DataType_1.DataType.UINT8:
             case DataType_1.DataType.INT16:
@@ -125,6 +131,7 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.REFERENCE_32:
                 return this.decodeReferenceToken(usedDataType);
             case DataType_1.DataType.COMPLEX_OBJECT:
+            case DataType_1.DataType.COMPLEX_OBJECT_2:
                 return this.decodeComplexToken(usedDataType);
             default:
                 throw new Error("Invalid dataType: " + usedDataType);
@@ -212,11 +219,35 @@ var TokenEncoder = /** @class */ (function () {
         if (dataType === undefined) {
             this.encodeDataType(this.dataTypeUtils.getDataType(token));
         }
-        this.encodeNumberArray(token.value, DataType_1.DataType.UINT8);
+        if (dataType !== DataType_1.DataType.COMPLEX_OBJECT_2) {
+            this.encodeNumberArray(token.value, DataType_1.DataType.UINT8);
+        }
+        else {
+            var structure = token.value;
+            var bytes = [];
+            for (var i = 0; i < structure.length; i += 4) {
+                bytes.push(this.bit2num(structure.slice(i, i + 4)));
+            }
+            this.encodeNumberArray(bytes, DataType_1.DataType.UINT8);
+            this.encodeSingleNumber(structure.length);
+        }
     };
     TokenEncoder.prototype.decodeComplexToken = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        var structure = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        var structure;
+        if (dataType !== DataType_1.DataType.COMPLEX_OBJECT_2) {
+            structure = this.decodeNumberArray(DataType_1.DataType.UINT8);
+        }
+        else {
+            var bytes = this.decodeNumberArray(DataType_1.DataType.UINT8);
+            structure = [];
+            for (var _i = 0, bytes_1 = bytes; _i < bytes_1.length; _i++) {
+                var byte = bytes_1[_i];
+                structure.push.apply(structure, this.num2bit(byte));
+            }
+            var size = this.decodeSingleNumber();
+            structure = structure.slice(0, size);
+        }
         return {
             type: this.dataTypeUtils.dataTypeToType(usedDataType),
             value: structure
@@ -268,6 +299,8 @@ var TokenEncoder = /** @class */ (function () {
     TokenEncoder.prototype.encodeSingleNumber = function (value, dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getNumberDataType(value));
         switch (usedDataType) {
+            case DataType_1.DataType.UINT2:
+                throw new Error("Use encode number array.");
             case DataType_1.DataType.UINT8:
                 this.streamDataView.setNextUint8(value);
                 break;
@@ -299,6 +332,8 @@ var TokenEncoder = /** @class */ (function () {
     TokenEncoder.prototype.decodeSingleNumber = function (dataType) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
         switch (usedDataType) {
+            case DataType_1.DataType.UINT2:
+                throw new Error("Use decode number array.");
             case DataType_1.DataType.UINT8:
                 return this.streamDataView.getNextUint8();
             case DataType_1.DataType.INT8:
@@ -319,22 +354,35 @@ var TokenEncoder = /** @class */ (function () {
                 throw new Error("Invalid dataType for number: " + usedDataType);
         }
     };
+    TokenEncoder.prototype.bit2num = function (_a) {
+        var a = _a[0], b = _a[1], c = _a[2], d = _a[3];
+        return ((a !== null && a !== void 0 ? a : 0) << 0) | ((b !== null && b !== void 0 ? b : 0) << 2) | ((c !== null && c !== void 0 ? c : 0) << 4) | ((d !== null && d !== void 0 ? d : 0) << 6);
+    };
+    TokenEncoder.prototype.num2bit = function (n, size) {
+        if (size === void 0) { size = 4; }
+        return [(n >> 0) & 3, (n >> 2) & 3, (n >> 4) & 3, (n >> 6) & 3].slice(0, size);
+    };
     TokenEncoder.prototype.encodeNumberArray = function (array, dataType) {
         var pos;
         for (pos = 0; pos < array.length;) {
-            var size = Math.min(255, array.length - pos);
+            var size = Math.min(MAX_ARRAY_SIZE, array.length - pos);
             this.encodeSingleNumber(size, DataType_1.DataType.UINT8);
             if (!size) {
                 break;
             }
-            var bestType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getBestType(array));
-            for (var i = 0; i < size; i++) {
-                this.encodeSingleNumber(array[pos + i], bestType);
+            if (dataType === DataType_1.DataType.UINT2) {
+                throw new Error("not supported");
+            }
+            else {
+                var bestType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getBestType(array));
+                for (var i = 0; i < size; i++) {
+                    this.encodeSingleNumber(array[pos + i], bestType);
+                }
             }
             pos += size;
         }
-        if (pos === 255) {
-            //  Reached the max size of 255, but the next one is 0.
+        if (pos === MAX_ARRAY_SIZE) {
+            //  Reached the max size, but the next one is 0.
             this.encodeSingleNumber(0, DataType_1.DataType.UINT8);
         }
     };
@@ -346,11 +394,16 @@ var TokenEncoder = /** @class */ (function () {
             if (!size) {
                 break;
             }
-            var type = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-            for (var i = 0; i < size; i++) {
-                numbers.push(this.decodeSingleNumber(type));
+            if (dataType === DataType_1.DataType.UINT2) {
+                throw new Error("not supported");
             }
-        } while (size >= 255);
+            else {
+                var type = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
+                for (var i = 0; i < size; i++) {
+                    numbers.push(this.decodeSingleNumber(type));
+                }
+            }
+        } while (size >= MAX_ARRAY_SIZE);
         return numbers;
     };
     TokenEncoder.prototype.encodeString = function (value, dataType, multiInfo) {
@@ -519,6 +572,9 @@ var TokenEncoder = /** @class */ (function () {
             function (tokenEncoder, tokenDecoder, reset) {
                 _this.testAction({ type: "complex", value: [1, 2, 3, 2, 1, 2, 1, 0] }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
             },
+            function (tokenEncoder, tokenDecoder, reset) {
+                _this.testAction({ type: "complex", value: "120100310000000310000000031000003100003100000031000000031000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000031000000000010000000120103100020103100020103100031000000000002010031000000031000000003100000310000310000003100000003100000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000310000000000100000001201031000201031000201031000310000000000020100310000000310000000031000003100003100000031000000031000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000003100000000001000000012010310002010310002010310003100000000000201003100000003100000000310000031000031000000310000000031000000000000000000000000000100000000000000000000000000310000000000100000001201031000201031000201031000310000000000020100310000000310000000031000003100003100000031000000031000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000003100000000001000000012010310002010310002010310003100000000000".split("").map(function (a) { return parseInt(a); }) }, function (o) { return tokenEncoder.encodeToken(o); }, reset, function () { return tokenDecoder.decodeToken(); });
+            },
         ];
         testers.forEach(function (tester, index) {
             var streamDataView = new stream_data_view_1.StreamDataView();
@@ -530,7 +586,7 @@ var TokenEncoder = /** @class */ (function () {
         });
     };
     TokenEncoder.testAction = function (value, encode, reset, decode, check) {
-        if (check === void 0) { check = function (result, value) { return console.assert(JSON.stringify(result) === JSON.stringify(value), "Not equal: \n%s\n!==\n%s", JSON.stringify(result), JSON.stringify(value)); }; }
+        if (check === void 0) { check = function (result, value) { return console.assert(JSON.stringify(result) === JSON.stringify(value), "Not equal: \n%s\n!==\n%s (expected)", JSON.stringify(result), JSON.stringify(value)); }; }
         encode(value);
         reset();
         var decoded = decode();

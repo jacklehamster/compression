@@ -36,7 +36,9 @@ export declare enum DataType {
     REFERENCE_8 = 30,
     REFERENCE_16 = 31,
     REFERENCE_32 = 32,
-    COMPLEX_OBJECT = 33
+    COMPLEX_OBJECT = 33,
+    UINT2 = 34,
+    COMPLEX_OBJECT_2 = 35
 }
 export declare const NUMBER_DATA_TYPES: DataType[];
 export declare class DataTypeUtils {

@@ -39,6 +39,8 @@ export enum DataType {
     REFERENCE_16 = 31,
     REFERENCE_32 = 32,
     COMPLEX_OBJECT = 33,
+    UINT2 = 34,
+    COMPLEX_OBJECT_2 = 35,
 }
 
 export const NUMBER_DATA_TYPES = [
@@ -138,7 +140,7 @@ export class DataTypeUtils {
     getDataType(token: StoredToken): DataType {
         switch (token.type) {
             case "complex":
-                return DataType.COMPLEX_OBJECT;
+                return token.bitLevel ? DataType.COMPLEX_OBJECT_2 : DataType.COMPLEX_OBJECT;
             case "array":
             case "object":
             case "split":
@@ -217,6 +219,7 @@ export class DataTypeUtils {
 
     dataTypeToType(dataType: DataType): Type {
         switch(dataType) {
+            case DataType.COMPLEX_OBJECT_2:
             case DataType.COMPLEX_OBJECT:
                 return "complex";
             case DataType.EMPTY_ARRAY:

@@ -21,6 +21,7 @@ export default interface Token extends StoredToken {
 export interface StoredToken {
     type: Type;
     value: any;
+    bitLevel?: boolean;
 }
 
 /**

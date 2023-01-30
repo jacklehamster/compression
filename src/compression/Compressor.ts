@@ -20,6 +20,12 @@ const ENCODERS: (() => Encoder | undefined)[] = [
 const DEFAULT: EncoderEnum[] = [EncoderEnum.FFLATE];
 
 export default class Compressor {
+    bitLevel?: boolean;
+
+    constructor(bitLevel?: boolean) {
+        this.bitLevel = bitLevel;        
+    }
+
     private applyEncoders(buffer: ArrayBuffer, encoders: Encoder[]): ArrayBuffer {
         let resultBuffer = buffer;
         encoders.forEach(encoder => {
@@ -46,7 +52,7 @@ export default class Compressor {
         const tokenizer = new Tokenizer();
         const header = await tokenizer.load(...files);
 
-        const reducer = new Reducer();
+        const reducer = new Reducer(false, this.bitLevel);
         const dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     }
@@ -61,7 +67,7 @@ export default class Compressor {
         const tokenizer = new Tokenizer();
         const header = tokenizer.tokenize(data);
 
-        const reducer = new Reducer();
+        const reducer = new Reducer(false, this.bitLevel);
         const dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     }

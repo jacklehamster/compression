@@ -58,7 +58,8 @@ var ENCODERS = [
 ];
 var DEFAULT = [EncoderEnum.FFLATE];
 var Compressor = /** @class */ (function () {
-    function Compressor() {
+    function Compressor(bitLevel) {
+        this.bitLevel = bitLevel;
     }
     Compressor.prototype.applyEncoders = function (buffer, encoders) {
         var resultBuffer = buffer;
@@ -90,7 +91,7 @@ var Compressor = /** @class */ (function () {
                         return [4 /*yield*/, tokenizer.load.apply(tokenizer, files)];
                     case 1:
                         header = _a.sent();
-                        reducer = new Reducer_1["default"]();
+                        reducer = new Reducer_1["default"](false, this.bitLevel);
                         dataStore = reducer.reduce(header);
                         return [2 /*return*/, this.compressDataStore(dataStore)];
                 }
@@ -106,7 +107,7 @@ var Compressor = /** @class */ (function () {
     Compressor.prototype.compress = function (data) {
         var tokenizer = new Tokenizer_1["default"]();
         var header = tokenizer.tokenize(data);
-        var reducer = new Reducer_1["default"]();
+        var reducer = new Reducer_1["default"](false, this.bitLevel);
         var dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     };

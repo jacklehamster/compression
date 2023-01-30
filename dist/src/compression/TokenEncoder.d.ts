@@ -30,6 +30,8 @@ export default class TokenEncoder {
     decodeMulti(tokens: ReducedToken[], organized: boolean): number;
     encodeSingleNumber(value: number, dataType?: DataType): void;
     decodeSingleNumber(dataType?: DataType): number;
+    bit2num([a, b, c, d]: number[]): number;
+    num2bit(n: number, size?: number): number[];
     encodeNumberArray(array: number[], dataType?: DataType): void;
     decodeNumberArray(dataType?: DataType): number[];
     encodeString(value: string, dataType?: DataType, multiInfo?: MultiInfo): void;

@@ -5,6 +5,8 @@ declare enum EncoderEnum {
     FFLATE = 1
 }
 export default class Compressor {
+    bitLevel?: boolean;
+    constructor(bitLevel?: boolean);
     private applyEncoders;
     private applyDecoders;
     /**

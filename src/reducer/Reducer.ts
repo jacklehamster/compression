@@ -1,4 +1,4 @@
-import Token, { Hash, ReducedToken, StoredToken, Type } from "../tokenizer/Token";
+import Token, { Hash, ReducedToken } from "../tokenizer/Token";
 import { Header } from "../tokenizer/Header";
 import { DataType, DataTypeUtils, StructureType } from "../compression/DataType";
 
@@ -24,9 +24,11 @@ export interface DataStore {
 export default class Reducer {
     debug: boolean;
     dataTypeUtils: DataTypeUtils = new DataTypeUtils();
+    bitLevel?: boolean;
 
-    constructor(debug?: boolean) {
+    constructor(debug?: boolean, bitLevel?: boolean) {
         this.debug = debug ?? false;
+        this.bitLevel = bitLevel;
     }
 
     /**
@@ -54,6 +56,7 @@ export default class Reducer {
             const result: ReducedToken[] = [{
                     type: "complex",
                     value: structure,
+                    bitLevel: this.bitLevel,
             }];
             this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
             return result;

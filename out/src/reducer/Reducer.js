@@ -16,9 +16,10 @@ var DataType_1 = require("../compression/DataType");
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
-    function Reducer(debug) {
+    function Reducer(debug, bitLevel) {
         this.dataTypeUtils = new DataType_1.DataTypeUtils();
         this.debug = debug !== null && debug !== void 0 ? debug : false;
+        this.bitLevel = bitLevel;
     }
     /**
      * Reduce header with smaller tokens for storage
@@ -49,7 +50,8 @@ var Reducer = /** @class */ (function () {
             var structure = [];
             var result = [{
                     type: "complex",
-                    value: structure
+                    value: structure,
+                    bitLevel: _this.bitLevel
                 }];
             _this.createComplexObject(root, subHashToIndex, header.registry, headerTokens, structure, result);
             return result;
