@@ -58,8 +58,7 @@ var ENCODERS = [
 ];
 var DEFAULT = [EncoderEnum.FFLATE];
 var Compressor = /** @class */ (function () {
-    function Compressor(allowSet) {
-        this.allowSet = allowSet;
+    function Compressor() {
     }
     Compressor.prototype.applyEncoders = function (buffer, encoders) {
         var resultBuffer = buffer;
@@ -91,7 +90,7 @@ var Compressor = /** @class */ (function () {
                         return [4 /*yield*/, tokenizer.load.apply(tokenizer, files)];
                     case 1:
                         header = _a.sent();
-                        reducer = new Reducer_1["default"](this.allowSet);
+                        reducer = new Reducer_1["default"]();
                         dataStore = reducer.reduce(header);
                         return [2 /*return*/, this.compressDataStore(dataStore)];
                 }
@@ -107,7 +106,7 @@ var Compressor = /** @class */ (function () {
     Compressor.prototype.compress = function (data) {
         var tokenizer = new Tokenizer_1["default"]();
         var header = tokenizer.tokenize(data);
-        var reducer = new Reducer_1["default"](this.allowSet);
+        var reducer = new Reducer_1["default"]();
         var dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     };
@@ -134,7 +133,7 @@ var Compressor = /** @class */ (function () {
         var _a;
         if (encoderEnums === void 0) { encoderEnums = DEFAULT; }
         var streamDataView = new stream_data_view_1.StreamDataView();
-        var tokenEncoder = new TokenEncoder_1["default"](streamDataView, this.allowSet);
+        var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
         //  Write header tokens
         tokenEncoder.encodeTokens(dataStore.headerTokens, true);
         //  Write fileNames
@@ -157,7 +156,7 @@ var Compressor = /** @class */ (function () {
         //  Write each file's data tokens.
         for (var index = 0; index < dataStore.files.length; index++) {
             var subStream = new stream_data_view_1.StreamDataView();
-            var subEncoder = new TokenEncoder_1["default"](subStream, this.allowSet);
+            var subEncoder = new TokenEncoder_1["default"](subStream);
             subEncoder.encodeTokens(dataStore.getDataTokens(index), false);
             //  save and compress buffer
             var subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
@@ -189,7 +188,7 @@ var Compressor = /** @class */ (function () {
         } while (globalStream.getOffset() < globalStream.getLength());
         var headerByteLength = globalStream.getNextUint32();
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
-        var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer), this.allowSet);
+        var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
         var headerTokens = headerTokenEncoder.decodeTokens(true);
         var files = headerTokenEncoder.decodeNumberArray();
         var subBuffers = [];
@@ -203,7 +202,7 @@ var Compressor = /** @class */ (function () {
         var getDataTokens = function (index) {
             var subBuffer = _this.applyDecoders(subBuffers[index], decoders);
             var streamDataView = new stream_data_view_1.StreamDataView(subBuffer);
-            var tokenDecoder = new TokenEncoder_1["default"](streamDataView, _this.allowSet);
+            var tokenDecoder = new TokenEncoder_1["default"](streamDataView);
             return tokenDecoder.decodeTokens(false);
         };
         //  The remaining from streamDataView is extra. Some compressed data don't have it.

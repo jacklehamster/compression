@@ -44,8 +44,6 @@ var DataType;
     DataType[DataType["COMPLEX_OBJECT"] = 33] = "COMPLEX_OBJECT";
     DataType[DataType["UINT2"] = 34] = "UINT2";
     DataType[DataType["UINT4"] = 35] = "UINT4";
-    DataType[DataType["STRING2"] = 36] = "STRING2";
-    DataType[DataType["STRING4"] = 37] = "STRING4";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -58,8 +56,7 @@ exports.NUMBER_DATA_TYPES = [
     DataType.FLOAT64,
 ];
 var DataTypeUtils = /** @class */ (function () {
-    function DataTypeUtils(allowSet) {
-        this.allowSet = allowSet;
+    function DataTypeUtils() {
     }
     DataTypeUtils.prototype.numberSatisfyDataType = function (value, dataType) {
         var hasDecimal = value % 1 !== 0;
@@ -120,12 +117,6 @@ var DataTypeUtils = /** @class */ (function () {
     DataTypeUtils.prototype.getStringDataType = function (value, noSet) {
         if (noSet === void 0) { noSet = false; }
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
-        if (!noSet && this.allowSet) {
-            var set = new Set(letterCodes);
-            if (set.size < letterCodes.length / 3 && set.size <= 16) {
-                return set.size <= 4 ? DataType.STRING2 : DataType.STRING4;
-            }
-        }
         if (letterCodes.every(function (code) { return code <= 255; })) {
             return DataType.STRING;
         }

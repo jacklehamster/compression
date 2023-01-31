@@ -24,8 +24,8 @@ export interface DataStore {
 export default class Reducer {
     dataTypeUtils: DataTypeUtils;
 
-    constructor(allowSet: boolean) {
-        this.dataTypeUtils = new DataTypeUtils(allowSet);
+    constructor() {
+        this.dataTypeUtils = new DataTypeUtils();
     }
 
     /**
@@ -111,12 +111,6 @@ export default class Reducer {
                 case DataType.FLOAT32:
                 case DataType.FLOAT64:
                     bucket.sort((a, b) => b.value - a.value);
-                    break;
-                case DataType.STRING2:
-                case DataType.STRING4:
-                    bucket.sort((a, b) => {
-                        return new Set(b.value.split("")).size - new Set(a.value.split("")).size;
-                    });
                     break;
                 case DataType.STRING:
                 case DataType.UNICODE:

@@ -16,9 +16,9 @@ export default class TokenEncoder {
     streamDataView: StreamDataView;
     dataTypeUtils: DataTypeUtils;
 
-    constructor(streamDataView: StreamDataView, allowSet: boolean) {
+    constructor(streamDataView: StreamDataView) {
         this.streamDataView = streamDataView;
-        this.dataTypeUtils = new DataTypeUtils(allowSet);
+        this.dataTypeUtils = new DataTypeUtils();
     }
 
     encodeTokens(tokens: ReducedToken[], organized: boolean) {
@@ -61,8 +61,6 @@ export default class TokenEncoder {
             case DataType.FLOAT64:
                 this.encodeSingleNumber(token.value, usedDataType);
                 break;
-            case DataType.STRING2:
-            case DataType.STRING4:
             case DataType.STRING:
             case DataType.UNICODE:
                 this.encodeString(token.value, usedDataType, multiInfo);
@@ -123,8 +121,6 @@ export default class TokenEncoder {
             case DataType.FLOAT32:
             case DataType.FLOAT64:
                 return { type: "leaf", value: this.decodeSingleNumber(usedDataType) };
-            case DataType.STRING2:
-            case DataType.STRING4:
             case DataType.STRING:
             case DataType.UNICODE:
                 return { type: "leaf", value: this.decodeString(usedDataType, multiInfo) };
@@ -454,15 +450,6 @@ export default class TokenEncoder {
 
     encodeString(value: string, dataType?: DataType, multiInfo?: MultiInfo, noSet: boolean = false): void {
         const usedDataType = dataType ?? this.encodeDataType(this.dataTypeUtils.getStringDataType(value, noSet));
-        if (usedDataType === DataType.STRING2 || usedDataType === DataType.STRING4) {
-            const set = new Set(value.split(""));
-            const letters = Array.from(set).sort();
-            this.encodeString(letters.join(""), undefined, multiInfo, true);
-            this.encodeNumberArray(value.split("").map(letter => letters.indexOf(letter)),
-                letters.length <= 4 ? DataType.UINT2 : DataType.UINT4
-            );
-            return;
-        }
         const letterCodes = value.split("").map(l => l.charCodeAt(0));
         if (!multiInfo?.organized || multiInfo.lastStringLength !== value.length) {
             letterCodes.push(0);
@@ -477,11 +464,6 @@ export default class TokenEncoder {
 
     decodeString(dataType?: DataType, multiInfo?: MultiInfo): string {
         const usedDataType = dataType ?? this.decodeDataType();
-        if (usedDataType === DataType.STRING2 || usedDataType === DataType.STRING4) {
-            const letters = this.decodeString(undefined, multiInfo).split("");
-            const array = this.decodeNumberArray(letters.length <= 4 ? DataType.UINT2 : DataType.UINT4);
-            return array.map(index => letters[index]).join("");
-        }
         const charCodes = [];
         const numberType = usedDataType === DataType.STRING ? DataType.UINT8 : DataType.UINT16;
         do {
@@ -755,8 +737,8 @@ export default class TokenEncoder {
 
         testers.forEach((tester, index) => {
             const streamDataView = new StreamDataView();
-            const encoder = new TokenEncoder(streamDataView, true);
-            const decoder = new TokenEncoder(streamDataView, true);
+            const encoder = new TokenEncoder(streamDataView);
+            const decoder = new TokenEncoder(streamDataView);
             const reset = () => streamDataView.resetOffset();
             tester(encoder, decoder, reset);
             console.info(`✅ Passed test ${index}.`);

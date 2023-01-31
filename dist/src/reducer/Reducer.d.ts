@@ -21,7 +21,7 @@ export interface DataStore {
  */
 export default class Reducer {
     dataTypeUtils: DataTypeUtils;
-    constructor(allowSet: boolean);
+    constructor();
     /**
      * Reduce header with smaller tokens for storage
      *

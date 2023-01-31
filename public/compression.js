@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.25",
+    "version": "1.0.26",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3084,8 +3084,7 @@ var ENCODERS = [
 ];
 var DEFAULT = [EncoderEnum.FFLATE];
 var Compressor = /** @class */ (function () {
-    function Compressor(allowSet) {
-        this.allowSet = allowSet;
+    function Compressor() {
     }
     Compressor.prototype.applyEncoders = function (buffer, encoders) {
         var resultBuffer = buffer;
@@ -3117,7 +3116,7 @@ var Compressor = /** @class */ (function () {
                         return [4 /*yield*/, tokenizer.load.apply(tokenizer, files)];
                     case 1:
                         header = _a.sent();
-                        reducer = new Reducer_1["default"](this.allowSet);
+                        reducer = new Reducer_1["default"]();
                         dataStore = reducer.reduce(header);
                         return [2 /*return*/, this.compressDataStore(dataStore)];
                 }
@@ -3133,7 +3132,7 @@ var Compressor = /** @class */ (function () {
     Compressor.prototype.compress = function (data) {
         var tokenizer = new Tokenizer_1["default"]();
         var header = tokenizer.tokenize(data);
-        var reducer = new Reducer_1["default"](this.allowSet);
+        var reducer = new Reducer_1["default"]();
         var dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     };
@@ -3160,7 +3159,7 @@ var Compressor = /** @class */ (function () {
         var _a;
         if (encoderEnums === void 0) { encoderEnums = DEFAULT; }
         var streamDataView = new stream_data_view_1.StreamDataView();
-        var tokenEncoder = new TokenEncoder_1["default"](streamDataView, this.allowSet);
+        var tokenEncoder = new TokenEncoder_1["default"](streamDataView);
         //  Write header tokens
         tokenEncoder.encodeTokens(dataStore.headerTokens, true);
         //  Write fileNames
@@ -3183,7 +3182,7 @@ var Compressor = /** @class */ (function () {
         //  Write each file's data tokens.
         for (var index = 0; index < dataStore.files.length; index++) {
             var subStream = new stream_data_view_1.StreamDataView();
-            var subEncoder = new TokenEncoder_1["default"](subStream, this.allowSet);
+            var subEncoder = new TokenEncoder_1["default"](subStream);
             subEncoder.encodeTokens(dataStore.getDataTokens(index), false);
             //  save and compress buffer
             var subBuffer = this.applyEncoders(subStream.getBuffer(), encoders);
@@ -3215,7 +3214,7 @@ var Compressor = /** @class */ (function () {
         } while (globalStream.getOffset() < globalStream.getLength());
         var headerByteLength = globalStream.getNextUint32();
         var headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
-        var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer), this.allowSet);
+        var headerTokenEncoder = new TokenEncoder_1["default"](new stream_data_view_1.StreamDataView(headerBuffer));
         var headerTokens = headerTokenEncoder.decodeTokens(true);
         var files = headerTokenEncoder.decodeNumberArray();
         var subBuffers = [];
@@ -3229,7 +3228,7 @@ var Compressor = /** @class */ (function () {
         var getDataTokens = function (index) {
             var subBuffer = _this.applyDecoders(subBuffers[index], decoders);
             var streamDataView = new stream_data_view_1.StreamDataView(subBuffer);
-            var tokenDecoder = new TokenEncoder_1["default"](streamDataView, _this.allowSet);
+            var tokenDecoder = new TokenEncoder_1["default"](streamDataView);
             return tokenDecoder.decodeTokens(false);
         };
         //  The remaining from streamDataView is extra. Some compressed data don't have it.
@@ -3299,8 +3298,6 @@ var DataType;
     DataType[DataType["COMPLEX_OBJECT"] = 33] = "COMPLEX_OBJECT";
     DataType[DataType["UINT2"] = 34] = "UINT2";
     DataType[DataType["UINT4"] = 35] = "UINT4";
-    DataType[DataType["STRING2"] = 36] = "STRING2";
-    DataType[DataType["STRING4"] = 37] = "STRING4";
 })(DataType = exports.DataType || (exports.DataType = {}));
 exports.NUMBER_DATA_TYPES = [
     DataType.UINT8,
@@ -3313,8 +3310,7 @@ exports.NUMBER_DATA_TYPES = [
     DataType.FLOAT64,
 ];
 var DataTypeUtils = /** @class */ (function () {
-    function DataTypeUtils(allowSet) {
-        this.allowSet = allowSet;
+    function DataTypeUtils() {
     }
     DataTypeUtils.prototype.numberSatisfyDataType = function (value, dataType) {
         var hasDecimal = value % 1 !== 0;
@@ -3375,12 +3371,6 @@ var DataTypeUtils = /** @class */ (function () {
     DataTypeUtils.prototype.getStringDataType = function (value, noSet) {
         if (noSet === void 0) { noSet = false; }
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
-        if (!noSet && this.allowSet) {
-            var set = new Set(letterCodes);
-            if (set.size < letterCodes.length / 3 && set.size <= 16) {
-                return set.size <= 4 ? DataType.STRING2 : DataType.STRING4;
-            }
-        }
         if (letterCodes.every(function (code) { return code <= 255; })) {
             return DataType.STRING;
         }
@@ -3572,9 +3562,9 @@ var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
 var MAX_ARRAY_SIZE = 255;
 var TokenEncoder = /** @class */ (function () {
-    function TokenEncoder(streamDataView, allowSet) {
+    function TokenEncoder(streamDataView) {
         this.streamDataView = streamDataView;
-        this.dataTypeUtils = new DataType_1.DataTypeUtils(allowSet);
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
     }
     TokenEncoder.prototype.encodeTokens = function (tokens, organized) {
         var pos = 0;
@@ -3614,8 +3604,6 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.FLOAT64:
                 this.encodeSingleNumber(token.value, usedDataType);
                 break;
-            case DataType_1.DataType.STRING2:
-            case DataType_1.DataType.STRING4:
             case DataType_1.DataType.STRING:
             case DataType_1.DataType.UNICODE:
                 this.encodeString(token.value, usedDataType, multiInfo);
@@ -3675,8 +3663,6 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.FLOAT32:
             case DataType_1.DataType.FLOAT64:
                 return { type: "leaf", value: this.decodeSingleNumber(usedDataType) };
-            case DataType_1.DataType.STRING2:
-            case DataType_1.DataType.STRING4:
             case DataType_1.DataType.STRING:
             case DataType_1.DataType.UNICODE:
                 return { type: "leaf", value: this.decodeString(usedDataType, multiInfo) };
@@ -3978,13 +3964,6 @@ var TokenEncoder = /** @class */ (function () {
         var _this = this;
         if (noSet === void 0) { noSet = false; }
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getStringDataType(value, noSet));
-        if (usedDataType === DataType_1.DataType.STRING2 || usedDataType === DataType_1.DataType.STRING4) {
-            var set = new Set(value.split(""));
-            var letters_1 = Array.from(set).sort();
-            this.encodeString(letters_1.join(""), undefined, multiInfo, true);
-            this.encodeNumberArray(value.split("").map(function (letter) { return letters_1.indexOf(letter); }), letters_1.length <= 4 ? DataType_1.DataType.UINT2 : DataType_1.DataType.UINT4);
-            return;
-        }
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
         if (!(multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.organized) || multiInfo.lastStringLength !== value.length) {
             letterCodes.push(0);
@@ -3998,11 +3977,6 @@ var TokenEncoder = /** @class */ (function () {
     };
     TokenEncoder.prototype.decodeString = function (dataType, multiInfo) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        if (usedDataType === DataType_1.DataType.STRING2 || usedDataType === DataType_1.DataType.STRING4) {
-            var letters_2 = this.decodeString(undefined, multiInfo).split("");
-            var array = this.decodeNumberArray(letters_2.length <= 4 ? DataType_1.DataType.UINT2 : DataType_1.DataType.UINT4);
-            return array.map(function (index) { return letters_2[index]; }).join("");
-        }
         var charCodes = [];
         var numberType = usedDataType === DataType_1.DataType.STRING ? DataType_1.DataType.UINT8 : DataType_1.DataType.UINT16;
         do {
@@ -4171,8 +4145,8 @@ var TokenEncoder = /** @class */ (function () {
         ];
         testers.forEach(function (tester, index) {
             var streamDataView = new stream_data_view_1.StreamDataView();
-            var encoder = new TokenEncoder(streamDataView, true);
-            var decoder = new TokenEncoder(streamDataView, true);
+            var encoder = new TokenEncoder(streamDataView);
+            var decoder = new TokenEncoder(streamDataView);
             var reset = function () { return streamDataView.resetOffset(); };
             tester(encoder, decoder, reset);
             console.info("\u2705 Passed test ".concat(index, "."));
@@ -4450,8 +4424,8 @@ var DataType_1 = require("../compression/DataType");
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
-    function Reducer(allowSet) {
-        this.dataTypeUtils = new DataType_1.DataTypeUtils(allowSet);
+    function Reducer() {
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
     }
     /**
      * Reduce header with smaller tokens for storage
@@ -4538,12 +4512,6 @@ var Reducer = /** @class */ (function () {
                 case DataType_1.DataType.FLOAT32:
                 case DataType_1.DataType.FLOAT64:
                     bucket.sort(function (a, b) { return b.value - a.value; });
-                    break;
-                case DataType_1.DataType.STRING2:
-                case DataType_1.DataType.STRING4:
-                    bucket.sort(function (a, b) {
-                        return new Set(b.value.split("")).size - new Set(a.value.split("")).size;
-                    });
                     break;
                 case DataType_1.DataType.STRING:
                 case DataType_1.DataType.UNICODE:

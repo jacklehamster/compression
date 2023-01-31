@@ -41,8 +41,6 @@ export enum DataType {
     COMPLEX_OBJECT = 33,
     UINT2 = 34,
     UINT4 = 35,
-    STRING2 = 36,
-    STRING4 = 37,
 }
 
 export const NUMBER_DATA_TYPES = [
@@ -57,11 +55,6 @@ export const NUMBER_DATA_TYPES = [
 ];
 
 export class DataTypeUtils {
-    allowSet: boolean;
-    constructor(allowSet: boolean) {
-        this.allowSet = allowSet;
-    }
-
     numberSatisfyDataType(value: number, dataType: DataType): boolean {
         const hasDecimal = value % 1 !== 0;
         if (hasDecimal) {
@@ -123,12 +116,6 @@ export class DataTypeUtils {
 
     getStringDataType(value: string, noSet: boolean = false): DataType {
         const letterCodes = value.split("").map(l => l.charCodeAt(0));
-        if (!noSet && this.allowSet) {
-            const set = new Set(letterCodes);
-            if (set.size < letterCodes.length / 3 && set.size <= 16) {
-                return set.size <= 4 ? DataType.STRING2: DataType.STRING4;
-            }    
-        }
 
         if (letterCodes.every(code => code <= 255)) {
             return DataType.STRING;

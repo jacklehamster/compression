@@ -58,7 +58,7 @@
         const originalData = await Promise.all(files.map(loader.load));
 
         // //  compress
-        const compressor = new Compressor(true);
+        const compressor = new Compressor();
         let time = performance.now();
         compressedBuffer = compressor.compress(Object.fromEntries(originalData.map((data, index) => [files[index], data])));
         console.log("Time to compress: %s", performance.now() - time);
@@ -94,7 +94,8 @@
          console.log("Number of files stored:", eTest.fileNames.length);
          console.log("Turtle data", turtleData);
          console.log("Original data size", eTest.originalDataSize);
-         console.log("Compressed size", eTest.compressedSize);
+         console.log("Compressed size %s (%s%)", eTest.compressedSize,
+            Math.ceil(10 * 100 * eTest.compressedSize / eTest.originalDataSize) / 10);
          console.log(eTest.getHeaderTokens());
         } catch (e) {
           console.error(e.message);

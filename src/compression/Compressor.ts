@@ -20,11 +20,6 @@ const ENCODERS: (() => Encoder | undefined)[] = [
 const DEFAULT: EncoderEnum[] = [EncoderEnum.FFLATE];
 
 export default class Compressor {
-    allowSet: boolean;
-    constructor(allowSet: boolean) {
-        this.allowSet = allowSet;
-    }
-
     private applyEncoders(buffer: ArrayBuffer, encoders: Encoder[]): ArrayBuffer {
         let resultBuffer = buffer;
         encoders.forEach(encoder => {
@@ -51,7 +46,7 @@ export default class Compressor {
         const tokenizer = new Tokenizer();
         const header = await tokenizer.load(...files);
 
-        const reducer = new Reducer(this.allowSet);
+        const reducer = new Reducer();
         const dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     }
@@ -66,7 +61,7 @@ export default class Compressor {
         const tokenizer = new Tokenizer();
         const header = tokenizer.tokenize(data);
 
-        const reducer = new Reducer(this.allowSet);
+        const reducer = new Reducer();
         const dataStore = reducer.reduce(header);
         return this.compressDataStore(dataStore);
     }
@@ -83,7 +78,7 @@ export default class Compressor {
 
     compressDataStore(dataStore: DataStore, encoderEnums: EncoderEnum[] = DEFAULT): ArrayBuffer {
         const streamDataView = new StreamDataView();
-        const tokenEncoder: TokenEncoder = new TokenEncoder(streamDataView, this.allowSet);
+        const tokenEncoder: TokenEncoder = new TokenEncoder(streamDataView);
 
         //  Write header tokens
         tokenEncoder.encodeTokens(dataStore.headerTokens, true);
@@ -112,7 +107,7 @@ export default class Compressor {
         //  Write each file's data tokens.
         for (let index = 0; index < dataStore.files.length; index++) {
             const subStream = new StreamDataView();
-            const subEncoder = new TokenEncoder(subStream, this.allowSet);
+            const subEncoder = new TokenEncoder(subStream);
             subEncoder.encodeTokens(dataStore.getDataTokens(index)!, false);
 
             //  save and compress buffer
@@ -149,7 +144,7 @@ export default class Compressor {
         const headerByteLength = globalStream.getNextUint32();
         const headerBuffer = this.applyDecoders(globalStream.getNextBytes(headerByteLength).buffer, decoders);
 
-        const headerTokenEncoder = new TokenEncoder(new StreamDataView(headerBuffer), this.allowSet);
+        const headerTokenEncoder = new TokenEncoder(new StreamDataView(headerBuffer));
         const headerTokens = headerTokenEncoder.decodeTokens(true);
         const files = headerTokenEncoder.decodeNumberArray();
 
@@ -165,7 +160,7 @@ export default class Compressor {
         const getDataTokens = (index: number) => {
             const subBuffer = this.applyDecoders(subBuffers[index], decoders);
             const streamDataView = new StreamDataView(subBuffer);
-            const tokenDecoder = new TokenEncoder(streamDataView, this.allowSet);
+            const tokenDecoder = new TokenEncoder(streamDataView);
             return tokenDecoder.decodeTokens(false);
         }
 

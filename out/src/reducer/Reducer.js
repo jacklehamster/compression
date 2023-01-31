@@ -16,8 +16,8 @@ var DataType_1 = require("../compression/DataType");
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
-    function Reducer(allowSet) {
-        this.dataTypeUtils = new DataType_1.DataTypeUtils(allowSet);
+    function Reducer() {
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
     }
     /**
      * Reduce header with smaller tokens for storage
@@ -104,12 +104,6 @@ var Reducer = /** @class */ (function () {
                 case DataType_1.DataType.FLOAT32:
                 case DataType_1.DataType.FLOAT64:
                     bucket.sort(function (a, b) { return b.value - a.value; });
-                    break;
-                case DataType_1.DataType.STRING2:
-                case DataType_1.DataType.STRING4:
-                    bucket.sort(function (a, b) {
-                        return new Set(b.value.split("")).size - new Set(a.value.split("")).size;
-                    });
                     break;
                 case DataType_1.DataType.STRING:
                 case DataType_1.DataType.UNICODE:

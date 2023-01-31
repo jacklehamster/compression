@@ -5,9 +5,9 @@ var stream_data_view_1 = require("stream-data-view");
 var DataType_1 = require("./DataType");
 var MAX_ARRAY_SIZE = 255;
 var TokenEncoder = /** @class */ (function () {
-    function TokenEncoder(streamDataView, allowSet) {
+    function TokenEncoder(streamDataView) {
         this.streamDataView = streamDataView;
-        this.dataTypeUtils = new DataType_1.DataTypeUtils(allowSet);
+        this.dataTypeUtils = new DataType_1.DataTypeUtils();
     }
     TokenEncoder.prototype.encodeTokens = function (tokens, organized) {
         var pos = 0;
@@ -47,8 +47,6 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.FLOAT64:
                 this.encodeSingleNumber(token.value, usedDataType);
                 break;
-            case DataType_1.DataType.STRING2:
-            case DataType_1.DataType.STRING4:
             case DataType_1.DataType.STRING:
             case DataType_1.DataType.UNICODE:
                 this.encodeString(token.value, usedDataType, multiInfo);
@@ -108,8 +106,6 @@ var TokenEncoder = /** @class */ (function () {
             case DataType_1.DataType.FLOAT32:
             case DataType_1.DataType.FLOAT64:
                 return { type: "leaf", value: this.decodeSingleNumber(usedDataType) };
-            case DataType_1.DataType.STRING2:
-            case DataType_1.DataType.STRING4:
             case DataType_1.DataType.STRING:
             case DataType_1.DataType.UNICODE:
                 return { type: "leaf", value: this.decodeString(usedDataType, multiInfo) };
@@ -411,13 +407,6 @@ var TokenEncoder = /** @class */ (function () {
         var _this = this;
         if (noSet === void 0) { noSet = false; }
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.encodeDataType(this.dataTypeUtils.getStringDataType(value, noSet));
-        if (usedDataType === DataType_1.DataType.STRING2 || usedDataType === DataType_1.DataType.STRING4) {
-            var set = new Set(value.split(""));
-            var letters_1 = Array.from(set).sort();
-            this.encodeString(letters_1.join(""), undefined, multiInfo, true);
-            this.encodeNumberArray(value.split("").map(function (letter) { return letters_1.indexOf(letter); }), letters_1.length <= 4 ? DataType_1.DataType.UINT2 : DataType_1.DataType.UINT4);
-            return;
-        }
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
         if (!(multiInfo === null || multiInfo === void 0 ? void 0 : multiInfo.organized) || multiInfo.lastStringLength !== value.length) {
             letterCodes.push(0);
@@ -431,11 +420,6 @@ var TokenEncoder = /** @class */ (function () {
     };
     TokenEncoder.prototype.decodeString = function (dataType, multiInfo) {
         var usedDataType = dataType !== null && dataType !== void 0 ? dataType : this.decodeDataType();
-        if (usedDataType === DataType_1.DataType.STRING2 || usedDataType === DataType_1.DataType.STRING4) {
-            var letters_2 = this.decodeString(undefined, multiInfo).split("");
-            var array = this.decodeNumberArray(letters_2.length <= 4 ? DataType_1.DataType.UINT2 : DataType_1.DataType.UINT4);
-            return array.map(function (index) { return letters_2[index]; }).join("");
-        }
         var charCodes = [];
         var numberType = usedDataType === DataType_1.DataType.STRING ? DataType_1.DataType.UINT8 : DataType_1.DataType.UINT16;
         do {
@@ -604,8 +588,8 @@ var TokenEncoder = /** @class */ (function () {
         ];
         testers.forEach(function (tester, index) {
             var streamDataView = new stream_data_view_1.StreamDataView();
-            var encoder = new TokenEncoder(streamDataView, true);
-            var decoder = new TokenEncoder(streamDataView, true);
+            var encoder = new TokenEncoder(streamDataView);
+            var decoder = new TokenEncoder(streamDataView);
             var reset = function () { return streamDataView.resetOffset(); };
             tester(encoder, decoder, reset);
             console.info("\u2705 Passed test ".concat(index, "."));

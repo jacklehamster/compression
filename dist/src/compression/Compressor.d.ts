@@ -5,8 +5,6 @@ declare enum EncoderEnum {
     FFLATE = 1
 }
 export default class Compressor {
-    allowSet: boolean;
-    constructor(allowSet: boolean);
     private applyEncoders;
     private applyDecoders;
     /**
