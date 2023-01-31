@@ -125,7 +125,7 @@ export class DataTypeUtils {
         const letterCodes = value.split("").map(l => l.charCodeAt(0));
         if (!noSet && this.allowSet) {
             const set = new Set(letterCodes);
-            if (set.size < letterCodes.length / 2 && set.size <= 16) {
+            if (set.size < letterCodes.length / 3 && set.size <= 16) {
                 return set.size <= 4 ? DataType.STRING2: DataType.STRING4;
             }    
         }

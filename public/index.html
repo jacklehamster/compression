@@ -58,7 +58,7 @@
         const originalData = await Promise.all(files.map(loader.load));
 
         // //  compress
-        const compressor = new Compressor();
+        const compressor = new Compressor(true);
         let time = performance.now();
         compressedBuffer = compressor.compress(Object.fromEntries(originalData.map((data, index) => [files[index], data])));
         console.log("Time to compress: %s", performance.now() - time);

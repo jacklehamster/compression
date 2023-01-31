@@ -2980,7 +2980,7 @@ exports["default"] = (function (c, id, msg, transfer, cb) {
 },{}],5:[function(require,module,exports){
 module.exports={
     "name": "@dobuki/compression",
-    "version": "1.0.24",
+    "version": "1.0.25",
     "description": "",
     "main": "out/src/index.js",
     "type": "module",
@@ -3377,7 +3377,7 @@ var DataTypeUtils = /** @class */ (function () {
         var letterCodes = value.split("").map(function (l) { return l.charCodeAt(0); });
         if (!noSet && this.allowSet) {
             var set = new Set(letterCodes);
-            if (set.size < letterCodes.length / 2 && set.size <= 16) {
+            if (set.size < letterCodes.length / 3 && set.size <= 16) {
                 return set.size <= 4 ? DataType.STRING2 : DataType.STRING4;
             }
         }
