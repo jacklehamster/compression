@@ -22,7 +22,11 @@ export interface DataStore {
  * Reduce header from using large tokens to reduce tokens.
  */
 export default class Reducer {
-    dataTypeUtils: DataTypeUtils = new DataTypeUtils();
+    dataTypeUtils: DataTypeUtils;
+
+    constructor(allowSet: boolean) {
+        this.dataTypeUtils = new DataTypeUtils(allowSet);
+    }
 
     /**
      * Reduce header with smaller tokens for storage
@@ -33,9 +37,10 @@ export default class Reducer {
     reduce(header: Header): DataStore {
         const hashToIndex : Record<Hash, number>  = {};
         //  start with header tokens
-        const headerTokens = this.createReducedTokens(
-            Object.values(header.registry)
+        const headerTokens = this.createReducedHeaderTokens(
+            this.filterSplit(Object.values(header.registry)
                 .filter(token => token.files.size > 1 || token.files.has("header")),
+                header.registry),
             hashToIndex);
 
         //  save files
@@ -107,6 +112,12 @@ export default class Reducer {
                 case DataType.FLOAT64:
                     bucket.sort((a, b) => b.value - a.value);
                     break;
+                case DataType.STRING2:
+                case DataType.STRING4:
+                    bucket.sort((a, b) => {
+                        return new Set(b.value.split("")).size - new Set(a.value.split("")).size;
+                    });
+                    break;
                 case DataType.STRING:
                 case DataType.UNICODE:
                     bucket.sort((a, b) => b.value.length - a.value.length);
@@ -123,7 +134,24 @@ export default class Reducer {
         return resultTokens;
     }
 
-    private createReducedTokens(tokens: Token[], hashToIndex : Record<Hash, number>, offset: number = 0) {
+    private filterSplit(tokens: Token[], registry: Record<Hash, Token>): Token[] {
+        for (let token of tokens) {
+            if (token.type === "split") {
+                const [chunskHash, separatorsHash] = token.reference!;
+                const chunksToken = registry[chunskHash];
+                const separatorsToken = registry[separatorsHash];
+                if (chunksToken.count <= token.count && separatorsToken.count <= token.count) {
+                    chunksToken.deleted = true;
+                    separatorsToken.deleted = true;
+                    token.type = "leaf";
+                    delete token.reference;
+                }
+            }
+        }
+        return tokens.filter(({deleted}) => !deleted);
+    }
+
+    private createReducedHeaderTokens(tokens: Token[], hashToIndex : Record<Hash, number>, offset: number = 0) {
         this.sortTokens(tokens);
         const organizedTokens = this.organizeTokens(tokens);
 

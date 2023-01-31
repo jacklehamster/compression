@@ -8,7 +8,7 @@ interface MultiInfo {
 export default class TokenEncoder {
     streamDataView: StreamDataView;
     dataTypeUtils: DataTypeUtils;
-    constructor(streamDataView: StreamDataView);
+    constructor(streamDataView: StreamDataView, allowSet: boolean);
     encodeTokens(tokens: ReducedToken[], organized: boolean): void;
     decodeTokens(organized: boolean): ReducedToken[];
     encodeToken(token: ReducedToken, dataType?: DataType, multiInfo?: MultiInfo): void;
@@ -30,11 +30,13 @@ export default class TokenEncoder {
     decodeMulti(tokens: ReducedToken[], organized: boolean): number;
     encodeSingleNumber(value: number, dataType?: DataType): void;
     decodeSingleNumber(dataType?: DataType): number;
-    bit2num([a, b, c, d]: number[]): number;
-    num2bit(n: number, size?: number): number[];
+    bit2ToNum([a, b, c, d]: number[]): number;
+    numToBit2(n: number, size?: number): number[];
+    bit4ToNum([a, b]: number[]): number;
+    numToBit4(n: number, size?: number): number[];
     encodeNumberArray(array: number[], dataType?: DataType): void;
     decodeNumberArray(dataType?: DataType): number[];
-    encodeString(value: string, dataType?: DataType, multiInfo?: MultiInfo): void;
+    encodeString(value: string, dataType?: DataType, multiInfo?: MultiInfo, noSet?: boolean): void;
     decodeString(dataType?: DataType, multiInfo?: MultiInfo): string;
     static selfTest(): void;
     private static testAction;

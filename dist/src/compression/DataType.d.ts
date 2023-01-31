@@ -37,14 +37,19 @@ export declare enum DataType {
     REFERENCE_16 = 31,
     REFERENCE_32 = 32,
     COMPLEX_OBJECT = 33,
-    UINT2 = 34
+    UINT2 = 34,
+    UINT4 = 35,
+    STRING2 = 36,
+    STRING4 = 37
 }
 export declare const NUMBER_DATA_TYPES: DataType[];
 export declare class DataTypeUtils {
+    allowSet: boolean;
+    constructor(allowSet: boolean);
     numberSatisfyDataType(value: number, dataType: DataType): boolean;
     getBestType(array: number[]): DataType;
     getNumberDataType(value: number): DataType;
-    getStringDataType(value: string): DataType;
+    getStringDataType(value: string, noSet?: boolean): DataType;
     getFullTokenDataType(token: Token): DataType;
     getDataType(token: StoredToken): DataType;
     dataTypeToType(dataType: DataType): Type;

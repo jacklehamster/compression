@@ -21,6 +21,7 @@ export interface DataStore {
  */
 export default class Reducer {
     dataTypeUtils: DataTypeUtils;
+    constructor(allowSet: boolean);
     /**
      * Reduce header with smaller tokens for storage
      *
@@ -37,7 +38,8 @@ export default class Reducer {
      * @param tokens
      */
     private organizeTokens;
-    private createReducedTokens;
+    private filterSplit;
+    private createReducedHeaderTokens;
     /**
      *  Traverse object to produce a set of tokens used to produce a complex object
      * @param token Root token

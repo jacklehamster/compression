@@ -2,7 +2,7 @@ export type Type = "leaf" | "array" | "object" | "split" | "reference" | "comple
 export type Hash = string;
 
 export const SPLIT_REGEX = /\W+/g;
-export const TEST_REGEX = /(\w\W+|\W+\w)/
+export const TEST_REGEX = /(\w{3,}\W+){2,}|(\W+\w{3,}){2,}/
 
 /**
  * Token represent each chunk of data within an object.
@@ -13,6 +13,7 @@ export default interface Token extends StoredToken {
     order: number;
     count: number;
     reference?: Hash[];
+    deleted?: boolean;
 }
 
 /**
@@ -41,6 +42,8 @@ export function getType(value: any): Type {
         return "array";
     } else if (typeof value === "object" && value) {
         return "object";
+    } else if (typeof value === "string" && new Set(value).size < 16) {
+        return "leaf";
     } else if (typeof value === "string" && TEST_REGEX.test(value)) {
         return "split";
     } else {

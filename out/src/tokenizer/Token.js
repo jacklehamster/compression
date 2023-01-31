@@ -2,7 +2,7 @@
 exports.__esModule = true;
 exports.getType = exports.TEST_REGEX = exports.SPLIT_REGEX = void 0;
 exports.SPLIT_REGEX = /\W+/g;
-exports.TEST_REGEX = /(\w\W+|\W+\w)/;
+exports.TEST_REGEX = /(\w{3,}\W+){2,}|(\W+\w{3,}){2,}/;
 /**
  * detect the type of a value
  *
@@ -15,6 +15,9 @@ function getType(value) {
     }
     else if (typeof value === "object" && value) {
         return "object";
+    }
+    else if (typeof value === "string" && new Set(value).size < 16) {
+        return "leaf";
     }
     else if (typeof value === "string" && exports.TEST_REGEX.test(value)) {
         return "split";

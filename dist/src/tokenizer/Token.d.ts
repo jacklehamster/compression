@@ -11,6 +11,7 @@ export default interface Token extends StoredToken {
     order: number;
     count: number;
     reference?: Hash[];
+    deleted?: boolean;
 }
 /**
  * A minimal version of a token, where we eliminate extra data like hash.

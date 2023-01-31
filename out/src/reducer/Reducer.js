@@ -16,8 +16,8 @@ var DataType_1 = require("../compression/DataType");
  * Reduce header from using large tokens to reduce tokens.
  */
 var Reducer = /** @class */ (function () {
-    function Reducer() {
-        this.dataTypeUtils = new DataType_1.DataTypeUtils();
+    function Reducer(allowSet) {
+        this.dataTypeUtils = new DataType_1.DataTypeUtils(allowSet);
     }
     /**
      * Reduce header with smaller tokens for storage
@@ -29,8 +29,8 @@ var Reducer = /** @class */ (function () {
         var _this = this;
         var hashToIndex = {};
         //  start with header tokens
-        var headerTokens = this.createReducedTokens(Object.values(header.registry)
-            .filter(function (token) { return token.files.size > 1 || token.files.has("header"); }), hashToIndex);
+        var headerTokens = this.createReducedHeaderTokens(this.filterSplit(Object.values(header.registry)
+            .filter(function (token) { return token.files.size > 1 || token.files.has("header"); }), header.registry), hashToIndex);
         //  save files
         var fileEntries = Object.entries(header.files).sort(function (_a, _b) {
             var name1 = _a[0];
@@ -105,6 +105,12 @@ var Reducer = /** @class */ (function () {
                 case DataType_1.DataType.FLOAT64:
                     bucket.sort(function (a, b) { return b.value - a.value; });
                     break;
+                case DataType_1.DataType.STRING2:
+                case DataType_1.DataType.STRING4:
+                    bucket.sort(function (a, b) {
+                        return new Set(b.value.split("")).size - new Set(a.value.split("")).size;
+                    });
+                    break;
                 case DataType_1.DataType.STRING:
                 case DataType_1.DataType.UNICODE:
                     bucket.sort(function (a, b) { return b.value.length - a.value.length; });
@@ -120,7 +126,27 @@ var Reducer = /** @class */ (function () {
         buckets.forEach(function (bucket) { return bucket.forEach(function (token) { return resultTokens.push(token); }); });
         return resultTokens;
     };
-    Reducer.prototype.createReducedTokens = function (tokens, hashToIndex, offset) {
+    Reducer.prototype.filterSplit = function (tokens, registry) {
+        for (var _i = 0, tokens_1 = tokens; _i < tokens_1.length; _i++) {
+            var token = tokens_1[_i];
+            if (token.type === "split") {
+                var _a = token.reference, chunskHash = _a[0], separatorsHash = _a[1];
+                var chunksToken = registry[chunskHash];
+                var separatorsToken = registry[separatorsHash];
+                if (chunksToken.count <= token.count && separatorsToken.count <= token.count) {
+                    chunksToken.deleted = true;
+                    separatorsToken.deleted = true;
+                    token.type = "leaf";
+                    delete token.reference;
+                }
+            }
+        }
+        return tokens.filter(function (_a) {
+            var deleted = _a.deleted;
+            return !deleted;
+        });
+    };
+    Reducer.prototype.createReducedHeaderTokens = function (tokens, hashToIndex, offset) {
         if (offset === void 0) { offset = 0; }
         this.sortTokens(tokens);
         var organizedTokens = this.organizeTokens(tokens);
