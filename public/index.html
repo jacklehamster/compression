@@ -53,6 +53,7 @@
           "data/data-repeat-object.json",
           "data/data-text.txt",
           "assets/zoom.svg",
+          "data/dialogs.yaml",
         ].sort();
 
         const loader = new Loader();
@@ -87,17 +88,18 @@
 
         const repeatObjectNoReference = extractable.extract("data/data-repeat-object.json");
         console.assert(repeatObjectNoReference.a !== repeatObjectNoReference.b);
+        window.extractable = extractable;
 
         try {
-         const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
-         const turtleData = eTest.extract("games/turtle/turtle.json", true);
-         console.log("Version", eTest.version);
-         console.log("Number of files stored:", eTest.fileNames.length);
-         console.log("Turtle data", turtleData);
-         console.log("Original data size", eTest.originalDataSize);
-         console.log("Compressed size %s (%s%)", eTest.compressedSize,
+          const eTest = await compressor.loadAndExpand("bin/gamefiles.dokbin");
+          const turtleData = eTest.extract("games/turtle/turtle.json", true);
+          console.log("Version", eTest.version);
+          console.log("Number of files stored:", eTest.fileNames.length);
+          console.log("Turtle data", turtleData);
+          console.log("Original data size", eTest.originalDataSize);
+          console.log("Compressed size %s (%s%)", eTest.compressedSize,
             Math.ceil(10 * 100 * eTest.compressedSize / eTest.originalDataSize) / 10);
-         console.log(eTest.getHeaderTokens());
+          console.log(eTest.getHeaderTokens());
         } catch (e) {
           console.error(e.message);
         }

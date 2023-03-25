@@ -36,6 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
+var yaml = require('js-yaml');
 function extension(file) {
     return file.split(".").pop();
 }
@@ -44,22 +45,27 @@ var Loader = /** @class */ (function () {
     }
     Loader.prototype.load = function (file) {
         return __awaiter(this, void 0, void 0, function () {
-            var response, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var response, _a, _b, _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0: return [4 /*yield*/, fetch(file)];
                     case 1:
-                        response = _b.sent();
-                        if (!(extension(file) === "json")) return [3 /*break*/, 3];
+                        response = _d.sent();
+                        if (!(extension(file) === "yaml" || extension(file) === "yml")) return [3 /*break*/, 3];
+                        _b = (_a = yaml).load;
+                        return [4 /*yield*/, response.text()];
+                    case 2: return [2 /*return*/, _b.apply(_a, [_d.sent()])];
+                    case 3:
+                        if (!(extension(file) === "json")) return [3 /*break*/, 5];
                         return [4 /*yield*/, response.json()];
-                    case 2:
-                        _a = _b.sent();
-                        return [3 /*break*/, 5];
-                    case 3: return [4 /*yield*/, response.text()];
                     case 4:
-                        _a = _b.sent();
-                        _b.label = 5;
-                    case 5: return [2 /*return*/, _a];
+                        _c = _d.sent();
+                        return [3 /*break*/, 7];
+                    case 5: return [4 /*yield*/, response.text()];
+                    case 6:
+                        _c = _d.sent();
+                        _d.label = 7;
+                    case 7: return [2 /*return*/, _c];
                 }
             });
         });

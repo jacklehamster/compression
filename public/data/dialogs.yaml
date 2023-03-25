@@ -1,0 +1,103 @@
+portraits:
+  image: assets/cutscene.png
+  width: 600
+  height: 800
+  characters: [kitty, turtle, turtle-mad, tourist, peng, gorillax, croco, red-turtle, scientist]
+
+dialogs:
+- name: Pass
+  characters:
+    left: scientist
+    right: mad-turtle
+  conversation:
+  - left: Are you stuck? I can help you through this level with a pass.
+  - right: Yes, can you help me out here?
+  - left: You consume the pass to skip a level. But you can regain that pass if you solve that level at a later time.
+  - prompt: true
+    left: You currently have $pass passes. Would you like to consume one to skip this level?
+    yes: Sounds good, let's get you off to the next island.
+    no: Sure, keep trying. I'm sure you'll figure out this level.
+
+- name: No pass
+  characters:
+    left: scientist
+    right: mad-turtle
+  conversation:
+  - left: I'm sorry, you have no pass available.
+  - left: If you solve a level that you previously skipped, you can regain a pass.
+
+- name: No pass last stage
+  characters:
+    left: scientist
+    right: mad-turtle
+  conversation:
+  - left: Unfortunately, passes are not available for use in the last stage.
+
+- name: Intro
+  characters:
+    left: tourist
+    right: turtle
+  conversation:
+    - left: Well, I'll be damned. Babo Turtle, in person.
+    - right: Yes, and I'm here to take on the challenge.
+    - left: Alright, you know the drill. Get all fruits off the island.
+    - left: Kitty will pick you up once you're done.
+    - right: Consider it done!
+
+- name: Failed start
+  characters:
+    left: tourist
+    right: turtle-mad
+  conversation:
+    - left: My.. what a way to start.
+    - left: I thought it was kinda obvious, but try not to fall into the water.
+    - right: I got distracted. The sun was in my eyes.
+    - left: Ok, well don't worry. Just take it slowly, and give it another try.
+    - right: Don't worry, I know what I'm doing!
+
+- name: Repeated failed start
+  characters:
+    left: tourist
+    right: turtle-mad
+  conversation:
+    - left: You love this level, don't you?
+    - right: Quiet! I'm just practicing.
+    - left: No problem. Practice makes perfect.
+    - left: Soon you'll be an expert and walking in a straight line, pick up the banana and walking back another path.
+    - right: It's harder than it sounds!
+
+- name: Mid stage1
+  characters:
+    left: kitty
+    right: turtle
+  conversation:
+    - left: Are you enjoying this so far?
+    - right: Yes Kitty! I hope you have enough cargo space. I'll be taking all the fruits off this island!
+    - left: Go bananas!
+
+- name: Stage2
+  characters:
+    left: kitty
+    right: turtle
+  conversation:
+    - left: It's getting chilly out there. Be careful for the ice.
+    - right: Don't worry about me. I know where to put my foot.
+    - left: You can do it Babo!
+
+- name: Stage2 failed
+  characters:
+    left: kitty
+    right: mad-turtle
+  conversation:
+    - left: Like I said, be cafeful out there. The ice is slippery.
+    - right: It's actually the water I'm worried about. It's really cold!
+    - left: Try not to fall in it!
+
+- name: Stage2 fail again
+  characters:
+    left: kitty
+    right: mad-turtle
+  conversation:
+    - right: What are you smiling about?
+    - left: I'm starting to think you really enjoy my company. That's why you won't pass this level, isn't it?
+    - right: Don't flatter yourself too much!
