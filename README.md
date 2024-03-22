@@ -1,4 +1,4 @@
-# THIS PROJECT IS OBSOLETE. USE [https://github.com/jacklehamster/dok-compression](github.com/jacklehamster/dok-compression) INSTEAD.
+# THIS PROJECT IS OBSOLETE. USE [github.com/jacklehamster/dok-compression](https://github.com/jacklehamster/dok-compression) INSTEAD.
 
 ------
 
