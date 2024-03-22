@@ -1,3 +1,8 @@
+# THIS PROJECT IS OBSOLETE. USE [https://github.com/jacklehamster/dok-compression](github.com/jacklehamster/dok-compression) INSTEAD.
+
+------
+
+
 # compression
 
 ### Work in Progress
